@@ -2,26 +2,33 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>連主檢進廠週保養查詢系統</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>連進廠週保養保養查詢系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
-        body { font-family: 'Noto Sans TC', sans-serif; -webkit-tap-highlight-color: transparent; }
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap');
         
+        body { 
+            font-family: 'Noto Sans TC', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            background-color: #f3f4f6; 
+            padding-bottom: 80px; 
+        }
+        .font-mono { font-family: 'Roboto Mono', monospace; }
+
         /* Card Left Borders */
         .card-entry { border-left: 5px solid #ef4444; } 
-        .card-main { border-left: 5px solid #3b82f6; } 
+        .card-main { border-left: 5px solid #2563eb; } 
         .card-weekly { border-left: 5px solid #10b981; } 
 
         /* Badges */
         .badge-entry { background: #fee2e2; color: #b91c1c; }
-        .badge-main { background: #dbeafe; color: #1d4ed8; }
-        .badge-weekly { background: #d1fae5; color: #047857; }
-        .badge-stat { background: #f3f4f6; color: #374151; border: 1px solid #d1d5db; }
+        .badge-main { background: #dbeafe; color: #1e40af; }
+        .badge-weekly { background: #d1fae5; color: #065f46; }
+        .badge-stat { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; font-size: 0.75rem; }
 
-        /* System Header Backgrounds */
+        /* System Backgrounds */
         .bg-sys-t74 { background: #eff6ff; color: #1e40af; border-left: 3px solid #60a5fa; } 
         .bg-sys-t75 { background: #ecfdf5; color: #047857; border-left: 3px solid #34d399; } 
         .bg-sys-t65k2 { background: #f5f3ff; color: #5b21b6; border-left: 3px solid #a78bfa; } 
@@ -32,120 +39,129 @@
         .bg-sys-truck { background: #f8fafc; color: #334155; border-left: 3px solid #64748b; } 
         .bg-sys-eng { background: #fffbeb; color: #92400e; border-left: 3px solid #f59e0b; }
 
-        .touch-btn { min-height: 44px; }
+        .touch-select { height: 44px; font-size: 15px; padding-right: 30px; }
+        
+        #sticky-header {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+            background-color: #1e293b; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
-<body class="bg-gray-100 min-h-screen pb-20">
+<body>
 
-    <!-- Header -->
-    <header class="bg-slate-800 text-white p-4 sticky top-0 z-50 shadow-md">
-        <div class="flex justify-between items-center gap-2">
-            <div class="flex items-center gap-3">
-                <!-- Dynamic Year Selector -->
-                <div class="bg-slate-700 rounded px-3 py-1.5 flex items-center relative border border-slate-600">
+    <!-- Unified Sticky Header -->
+    <div id="sticky-header">
+        <div class="flex justify-between items-center p-3 border-b border-slate-700/50">
+            <div class="flex items-center gap-2">
+                <div class="bg-slate-700 rounded-lg px-3 py-1.5 flex items-center relative border border-slate-600">
                     <span class="text-xs text-slate-400 mr-2">民國</span>
-                    <select id="yearInput" class="bg-transparent text-white font-bold text-lg outline-none appearance-none pr-6 z-10 cursor-pointer">
-                        <!-- JS populates 115-125 -->
+                    <select id="yearInput" class="bg-transparent text-white font-bold text-lg outline-none appearance-none pr-5 z-10 cursor-pointer w-16 text-center">
+                        <!-- JS populates -->
                     </select>
                     <i class="fa-solid fa-caret-down absolute right-2 text-slate-400 text-xs pointer-events-none"></i>
                     <span class="text-xs text-slate-400 ml-1">年</span>
                 </div>
-                <div class="hidden md:block text-sm font-bold"></div>
             </div>
-            <button onclick="exportToCSV()" class="bg-emerald-600 active:bg-emerald-700 text-white px-3 py-2 rounded text-sm font-medium shadow transition whitespace-nowrap flex items-center gap-2">
-                <i class="fa-solid fa-download"></i> <span class="hidden md:inline">下載報表</span>
+            <button onclick="exportToCSV()" class="bg-emerald-600 active:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow flex items-center gap-2 transition-colors">
+                <i class="fa-solid fa-file-export"></i> 匯出報表
             </button>
         </div>
         
-        <!-- Filters -->
-        <div class="mt-3 grid grid-cols-3 gap-2">
-            <select id="monthFilter" class="bg-slate-700 text-white text-sm rounded border-none p-2 outline-none touch-btn shadow-sm font-medium w-full">
-                <option value="all">月份：全部</option>
-                <option value="1">1月</option>
-                <option value="2">2月</option>
-                <option value="3">3月</option>
-                <option value="4">4月</option>
-                <option value="5">5月</option>
-                <option value="6">6月</option>
-                <option value="7">7月</option>
-                <option value="8">8月</option>
-                <option value="9">9月</option>
-                <option value="10">10月</option>
-                <option value="11">11月</option>
-                <option value="12">12月</option>
-            </select>
+        <div class="grid grid-cols-3 gap-2 p-3 pb-2">
+            <div class="relative">
+                <select id="monthFilter" class="w-full bg-slate-700 text-white rounded-lg border border-slate-600 outline-none touch-select appearance-none pl-3">
+                    <option value="all">月份: 全部</option>
+                    <option value="1">1月</option>
+                    <option value="2">2月</option>
+                    <option value="3">3月</option>
+                    <option value="4">4月</option>
+                    <option value="5">5月</option>
+                    <option value="6">6月</option>
+                    <option value="7">7月</option>
+                    <option value="8">8月</option>
+                    <option value="9">9月</option>
+                    <option value="10">10月</option>
+                    <option value="11">11月</option>
+                    <option value="12">12月</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
+            </div>
             
-            <select id="sysFilter" class="bg-slate-700 text-white text-sm rounded border-none p-2 outline-none touch-btn shadow-sm font-medium w-full">
-                <option value="all">裝備：全部</option>
-                <!-- Weapons -->
-                <option value="T74">T74 排用機槍</option>
-                <option value="T75">T75 班用機槍</option>
-                <option value="T65K2">T65K2 步槍</option>
-                <option value="T85">T85 榴彈發射器</option>
-                <option value="M1911">M1911 手槍</option>
-                <option value="M1911A1">M1911A1 手槍</option>
-                <!-- Chemical Individual Items -->
-                <option value="M8A1">M8A1 毒氣警報器</option>
-                <option value="LS-920">LS-920 消毒器</option>
-                <option value="T3-75">T3-75 防毒面具</option>
-                <option value="M256">M256 偵檢包</option>
-                <option value="WAR_FILTER">戰備濾毒罐</option>
-                <option value="62_FILTER">62式濾毒罐</option>
-                <option value="T4-86">T4-86 消除包</option>
-                <!-- Comms Individual Items -->
-                <option value="MHR-112">MHR-112 無線電機</option>
-                <option value="CS/PRC-37C">CS/PRC-37C 無線電機</option>
-                <option value="KY-2000A">KY-2000A 電子話機</option>
-                <!-- Vehicle -->
-                <option value="TRUCK">3.5噸載重車</option>
-                <!-- Engineering -->
-                <option value="COMPASS">指北針</option>
-            </select>
+            <div class="relative">
+                <select id="sysFilter" class="w-full bg-slate-700 text-white rounded-lg border border-slate-600 outline-none touch-select appearance-none pl-3">
+                    <option value="all">裝備: 全部</option>
+                    <option value="T74">T74 排機</option>
+                    <option value="T75">T75 班機</option>
+                    <option value="T65K2">T65K2</option>
+                    <option value="T85">T85 榴彈</option>
+                    <option value="M1911">M1911/A1</option>
+                    <option value="M8A1">M8A1</option>
+                    <option value="LS-920">LS-920</option>
+                    <option value="T3-75">T3-75</option>
+                    <option value="M256">M256</option>
+                    <option value="WAR_FILTER">戰備濾毒罐</option>
+                    <option value="62_FILTER">62式濾毒罐</option>
+                    <option value="T4-86">T4-86</option>
+                    <option value="MHR-112">MHR-112</option>
+                    <option value="PRC-37C">PRC-37C</option>
+                    <option value="KY-2000A">KY-2000A</option>
+                    <option value="TRUCK">3.5T載重車</option>
+                    <option value="COMPASS">指北針</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
+            </div>
 
-            <select id="typeFilter" class="bg-slate-700 text-white text-sm rounded border-none p-2 outline-none touch-btn shadow-sm font-medium w-full">
-                <option value="all">保養類別：全部</option>
-                <option value="ENTRY">🔴 進廠/定保</option>
-                <option value="連主官裝備檢查">🔵 連主檢</option>
-                <option value="週保養">🟢 週保養</option>
-            </select>
+            <div class="relative">
+                <select id="typeFilter" class="w-full bg-slate-700 text-white rounded-lg border border-slate-600 outline-none touch-select appearance-none pl-3">
+                    <option value="all">任務: 全部</option>
+                    <option value="進廠">🔴 進廠</option>
+                    <option value="連主官裝備檢查">🔵 連主檢</option>
+                    <option value="週保養">🟢 週保養</option>
+                </select>
+                <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
+            </div>
         </div>
-    </header>
 
-    <!-- Search -->
-    <div class="p-3 bg-white border-b border-gray-200 sticky top-[138px] z-40">
-        <div class="relative">
-            <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-gray-400"></i>
-            <input type="text" id="searchInput" placeholder="輸入序號搜尋..." 
-                   class="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-300 rounded-full text-sm focus:ring-2 focus:ring-blue-500 outline-none transition">
+        <div class="px-3 pb-3 bg-slate-800">
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
+                <input type="text" id="searchInput" placeholder="輸入機號搜尋..." 
+                       class="w-full pl-10 pr-4 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none placeholder-slate-400">
+            </div>
         </div>
     </div>
 
-    <!-- Content -->
-    <div id="cardContainer" class="p-3 space-y-4"></div>
+    <!-- Main Content -->
+    <div id="cardContainer" class="pt-[180px] p-3 space-y-4 max-w-2xl mx-auto"></div>
     
-    <div id="noData" class="hidden py-12 text-center text-gray-400">
-        <i class="fa-solid fa-box-open text-5xl mb-3 text-gray-300"></i>
-        <p>沒有符合的資料</p>
+    <div id="noData" class="hidden pt-[200px] text-center text-gray-400">
+        <div class="flex flex-col items-center">
+            <i class="fa-solid fa-clipboard-list text-6xl mb-4 text-gray-300"></i>
+            <p class="text-lg font-medium">沒有符合條件的資料</p>
+        </div>
     </div>
 
     <script>
-        // --- DATA DEFINITIONS ---
+        const naturalSort = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
         function parseList(str) {
             if(!str) return [];
-            return str.replace(/\n/g, ',').split(',').map(s => s.trim()).filter(id => id && id.length > 0);
+            return str.replace(/\n/g, ',').split(',').map(s => s.trim()).filter(id => id && id.length > 0).sort(naturalSort);
         }
 
+        // RAW DATA
         const t74_machines = [
             { id: "007231", group: 1 }, { id: "007447", group: 1 }, { id: "007496", group: 2 }, { id: "007501", group: 2 }, 
             { id: "007544", group: 2 }, { id: "007654", group: 3 }, { id: "009661", group: 3 }, { id: "009971", group: 3 }
         ];
 
         const t75_list_raw = `1 008727, 2 008749, 3 008788, 4 008805, 5 008870, 6 008899, 7 008950, 8 009043, 9 009097, 10 009109, 11 012244, 12 012247, 13 012459, 14 012610, 15 012627, 16 012864, 17 012865, 18 012880, 19 012919, 20 012925, 21 012928, 22 012931, 23 012933, 24 012943, 25 012946, 26 012954, 27 012959, 28 012962, 29 012964, 30 012967, 31 013026, 32 013029, 33 013031, 34 013032, 35 013038, 36 013039`;
-        const t75_machines = parseList(t75_list_raw).map((s, idx) => {
-            const parts = s.split(' ');
-            const id = parts[parts.length - 1];
-            return { id: id, group: (idx + 1) <= 18 ? 'A' : 'B' };
+        let t75_machines = [];
+        t75_list_raw.replace(/\n/g, ',').split(',').forEach(s => {
+            const parts = s.trim().split(' ');
+            if(parts.length > 0) t75_machines.push(parts[parts.length-1]);
         });
+        t75_machines.sort(naturalSort);
+        const t75_data = t75_machines.map((id, idx) => ({ id: id, group: (idx + 1) <= 18 ? 'A' : 'B' }));
 
         const t65k2_ids = parseList(`186074, 187921, 193648, 207145, 209263, 209439, 209697, 209823, 219834, 220007, 221303, 221554, 221566, 221640, 224376, 230470, 231016, 231849, 232622, 234718, 234742, 236236, 236465, 236967, 237338, 314846, 332587, 332607, 332668, 332754, 332762, 337624, 362245, 362411, 362415, 362676, 363053, 364122, 364896, 367128, 367730, 368657, 369550, 370013, 370200, 370374, 383020, 383715, 385207, 385332, 386038, 386251, 386399, 388131, 389145, 389516, 390010, 390539, 391124, 391958, 392012, 392166, 392167, 393872, 393947, 394347, 394468, 394681, 394777, 394861, 394863, 394902, 394907, 394913, 394923, 395042, 395065, 395109, 395113, 395167, 395348, 395555, 395671, 395860, 396172, 396176, 396207, 396356, 396359, 396597, 397068, 397153, 397273, 397314, 398005, 398192, 398389, 398432, 398934, 399146, 399327, 399595, 400655, 400847, 401766, 402894, 403128, 403843, 404390, 405120, 405205, 405700, 406970, 407492, 407620, 408250`);
         const t85_ids = parseList(`000032, 000155, 001750, 001780, 001998, 008454, 008834, 008890, 009004, 009759, 010532, 010681, 011186, 011293, 011358, 011498, 011522, 011662, 011820, 011906, 012571, 012589, 012695, 012760, 012775, 012845, 014580, 016641, 018164, 018390, 019120, 019191, 019202, 019261, 019674, 021606`);
@@ -153,21 +169,18 @@
         const m1911_ids = parseList(`124141, 1546783, 1810911, 1943969, 1952496, 2215347, 2226406, 954710`);
         const m8a1_ids = ["1010413"];
         const ls920_ids = ["513", "514"];
-        
         const mhr112_ids = parseList(`LV11203353, LV11203354, LV11203355, LV11203356, LV11203357, LV11203358, LV11203359, LV11203360, LV11203361, LV11203362, LV11203363, LV11203364, LV11203365, LV11203366, LV11203367, LV11203368, LV11203369, LV11203370, LV11203371, LV11203372, LV11203373`);
         const prc37c_ids = ["22250"];
         const ky2000_ids = parseList(`714-T02378, 714-T02422, 714-T02628, 714-T02647, 714-T03864, 714-T13385, 714-T13867, 714-T13873, 714-T14184, 714-T14238, 714-T15582, 714-T17758, 714-T17764`);
         const truck_ids = ["軍3-23993"];
-        // Engineering
         const compass_ids = parseList(`V-109J-0D07-0374, 900288, 9105443, 9100940`);
-
         const t375_ids = Array(161).fill("量產型");
         const m256_ids = Array(1).fill("偵檢包");
         const filter_war_ids = Array(161).fill("戰備罐");
         const filter_62_ids = Array(161).fill("62式");
         const t486_ids = Array(161).fill("消除包");
 
-        // CATEGORY MAPPING
+        // CATEGORY MAPPING (For Stats)
         const sysCategories = {
             'T74': '兵器', 'T75': '兵器', 'T65K2': '兵器', 'T85': '兵器',
             'M1911A1': '兵器', 'M1911': '兵器',
@@ -196,7 +209,7 @@
         };
 
         let mergedData = [];
-        let currentYearROC = 115; // 2026 default
+        let currentYearROC = 116;
 
         function isFixedHoliday(date) {
             const m = date.getMonth() + 1;
@@ -275,15 +288,7 @@
             const m = String(date.getMonth() + 1).padStart(2, '0');
             const d = String(date.getDate()).padStart(2, '0');
             const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
-            // Main format display: 115.05.27(三)
-            const yearROC = date.getFullYear() - 1911;
-            return { 
-                str: `${yearROC}.${m}.${d}`, 
-                day: dayNames[date.getDay()],
-                display: `${yearROC}.${m}.${d}(${dayNames[date.getDay()]})`,
-                obj: date, 
-                key: `${date.getFullYear()}${m}${d}` 
-            };
+            return { str: `${m}.${d}`, day: dayNames[date.getDay()], obj: date, key: `${date.getFullYear()}${m}${d}` };
         }
 
         function getWeekNumber(d) {
@@ -299,7 +304,6 @@
             const yearAD = currentYearROC + 1911;
 
             for (let m = 1; m <= 12; m++) {
-                
                 const mainWed = getNthWeekday(yearAD, m, 4, 3);
                 let mainInspWeekKey = null;
                 if (mainWed) {
@@ -308,7 +312,7 @@
                     mainInspWeekKey = formatDate(fri).key;
                 }
 
-                // T74 (Quarterly)
+                // T74 Logic
                 let entryGroup = 0;
                 if (m % 3 === 1) entryGroup = 1;
                 else if (m % 3 === 2) entryGroup = 2;
@@ -316,8 +320,7 @@
 
                 const entryDateObj = getWorkingDay(yearAD, m, 1);
                 const t74_entry_list = t74_machines.filter(x => x.group === entryGroup).map(x => x.id);
-                // T74 Entry name change
-                rawEvents.push({ sys: 'T74', month: m, dateObj: formatDate(entryDateObj), type: 'Q保併連主檢', machines: t74_entry_list, remark: '排機 (免保)' });
+                rawEvents.push({ sys: 'T74', month: m, dateObj: formatDate(entryDateObj), type: '進廠', machines: t74_entry_list, remark: '排機 (免保)' });
 
                 const week3Fri = getNthWeekday(yearAD, m, 3, 5); 
                 
@@ -338,7 +341,6 @@
                             rawEvents.push({ sys: 'T85', month: m, dateObj: w3Fmt, type: lbl, machines: t85_ids, remark: '每月第3週' });
                             rawEvents.push({ sys: 'M1911A1', month: m, dateObj: w3Fmt, type: lbl, machines: m1911a1_ids, remark: '每月第3週' });
                             rawEvents.push({ sys: 'M1911', month: m, dateObj: w3Fmt, type: lbl, machines: m1911_ids, remark: '每月第3週' });
-                            // Compass (Engineering)
                             rawEvents.push({ sys: 'COMPASS', month: m, dateObj: w3Fmt, type: lbl, machines: compass_ids, remark: '每月第3週' });
                         }
                     }
@@ -348,26 +350,22 @@
                     rawEvents.push({ sys: 'T85', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: t85_ids, remark: '第4週 (週三)' });
                     rawEvents.push({ sys: 'M1911A1', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: m1911a1_ids, remark: '第4週 (週三)' });
                     rawEvents.push({ sys: 'M1911', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: m1911_ids, remark: '第4週 (週三)' });
-                    // Compass Main
                     rawEvents.push({ sys: 'COMPASS', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: compass_ids, remark: '第4週 (週三)' });
                 }
 
-                // T75
+                // T75 Logic
                 const wd1 = getWorkingDay(yearAD, m, 1);
                 const wd2 = getWorkingDay(yearAD, m, 2);
-                const grpA = t75_machines.filter(x => x.group === 'A').map(x => x.id);
-                const grpB = t75_machines.filter(x => x.group === 'B').map(x => x.id);
-                // T75 Entry name change
-                rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd1), type: 'M保併連主檢', machines: grpA, remark: '班機 1-18' });
-                rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd2), type: 'M保併連主檢', machines: grpB, remark: '班機 19-36' });
+                const grpA = t75_data.filter(x => x.group === 'A').map(x => x.id);
+                const grpB = t75_data.filter(x => x.group === 'B').map(x => x.id);
+                rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd1), type: '進廠', machines: grpA, remark: '班機 1-18' });
+                rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd2), type: '進廠', machines: grpB, remark: '班機 19-36' });
 
                 // Entries (Others)
-                // Updated MHR-112 and PRC-37C Entry Type
-                rawEvents.push({ sys: 'MHR-112', month: m, dateObj: formatDate(wd1), type: 'M保併連主檢', machines: mhr112_ids, remark: '第1工作日' });
-                rawEvents.push({ sys: 'PRC-37C', month: m, dateObj: formatDate(wd1), type: 'M保併連主檢', machines: prc37c_ids, remark: '第1工作日' });
-                
-                rawEvents.push({ sys: 'M8A1', month: m, dateObj: formatDate(wd2), type: 'M保併連主檢', machines: m8a1_ids, remark: '第2工作日' });
-                rawEvents.push({ sys: 'LS-920', month: m, dateObj: formatDate(wd2), type: 'M保併連主檢', machines: ls920_ids, remark: '第2工作日' });
+                rawEvents.push({ sys: 'MHR-112', month: m, dateObj: formatDate(wd1), type: '進廠', machines: mhr112_ids, remark: '第1工作日' });
+                rawEvents.push({ sys: 'PRC-37C', month: m, dateObj: formatDate(wd1), type: '進廠', machines: prc37c_ids, remark: '第1工作日' });
+                rawEvents.push({ sys: 'M8A1', month: m, dateObj: formatDate(wd2), type: '進廠', machines: m8a1_ids, remark: '第2工作日' });
+                rawEvents.push({ sys: 'LS-920', month: m, dateObj: formatDate(wd2), type: '進廠', machines: ls920_ids, remark: '第2工作日' });
 
                 // Weekly Maint
                 const allFridays = getAllFridays(yearAD, m);
@@ -417,8 +415,8 @@
                     let mainMon = new Date(mainWed);
                     mainMon.setDate(mainWed.getDate() - 2);
                     const monFmt = formatDate(mainMon);
-                    
                     const mainLbl = '連主官裝備檢查';
+                    
                     rawEvents.push({ sys: 'M8A1', month: m, dateObj: monFmt, type: mainLbl, machines: m8a1_ids, remark: '週一' });
                     rawEvents.push({ sys: 'LS-920', month: m, dateObj: monFmt, type: mainLbl, machines: ls920_ids, remark: '週一' });
                     rawEvents.push({ sys: 'T3-75', month: m, dateObj: monFmt, type: mainLbl, machines: t375_ids, remark: '週一' });
@@ -443,15 +441,12 @@
                     grouped[key] = {
                         month: e.month,
                         date: e.dateObj.str,
-                        dateDisplay: e.dateObj.display,
                         day: e.dateObj.day,
                         type: e.type,
                         dateKey: e.dateObj.key,
                         entries: []
                     };
                 }
-                const naturalSort = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
-                e.machines.sort(naturalSort);
                 grouped[key].entries.push({ sys: e.sys, machines: e.machines, remark: e.remark });
             });
 
@@ -477,9 +472,7 @@
 
             mergedData.forEach((row, rowIndex) => {
                 let visibleEntries = row.entries.filter(entry => {
-                    // System Filter (Simple name matching)
                     if (sysFilter !== 'all' && entry.sys !== sysFilter) return false;
-
                     if (searchInput) {
                         const sysName = sysNames[entry.sys];
                         if (sysName.includes(searchInput)) return true;
@@ -490,10 +483,7 @@
 
                 if (monthFilter !== 'all' && row.month != monthFilter) return;
                 
-                // TYPE FILTER with Entry Group logic
-                if (typeFilter === 'ENTRY') {
-                    if (!['進廠', 'Q保併連主檢', 'M保併連主檢'].includes(row.type)) return;
-                } else if (typeFilter !== 'all') {
+                if (typeFilter !== 'all') {
                     if (typeFilter === '週保養' && !row.type.includes('週保養')) return;
                     if (typeFilter !== '週保養' && row.type !== typeFilter) return;
                 }
@@ -501,14 +491,14 @@
                 if (visibleEntries.length === 0) return;
 
                 hasData = true;
-                
-                // --- CATEGORY STATS LOGIC ---
+
+                // --- STATS CALC ---
                 const uniqueCategories = new Set(visibleEntries.map(e => sysCategories[e.sys])).size;
                 const totalItems = visibleEntries.length;
                 const totalPieces = visibleEntries.reduce((acc, curr) => acc + curr.machines.length, 0);
 
                 let cardClass = '', badgeClass = '', icon = '';
-                if (['進廠', 'Q保併連主檢', 'M保併連主檢'].includes(row.type)) {
+                if (row.type === '進廠') {
                     cardClass = 'card-entry'; badgeClass = 'badge-entry'; icon = 'fa-truck-arrow-right';
                 } else if (row.type.includes('連主官')) {
                     cardClass = 'card-main'; badgeClass = 'badge-main'; icon = 'fa-clipboard-check';
@@ -559,18 +549,22 @@
                 const card = document.createElement('div');
                 card.className = `bg-white rounded-lg shadow-sm border border-gray-100 p-4 ${cardClass}`;
                 card.innerHTML = `
-                    <div class="flex justify-between items-center mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="text-xl font-bold text-slate-800 leading-none">
-                                ${row.dateDisplay}
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <div class="text-3xl font-bold text-slate-800 leading-none">
+                                ${row.date}
+                                <span class="text-lg font-normal text-slate-500">(${row.day})</span>
                             </div>
-                            <span class="text-xl font-bold px-2 py-1 rounded flex items-center gap-1 ${badgeClass} whitespace-nowrap h-fit">
-                                ${row.type}
+                            <div class="text-xs text-slate-400 mt-1">民國${currentYearROC}年 ${row.month}月</div>
+                        </div>
+                        <div class="flex flex-col items-end gap-1">
+                            <span class="text-xs font-bold px-2 py-1 rounded flex items-center gap-1 ${badgeClass}">
+                                <i class="fa-solid ${icon}"></i> ${row.type}
+                            </span>
+                            <span class="badge-stat text-xs font-bold px-2 py-1 rounded shadow-sm">
+                                ${uniqueCategories}類 ${totalItems}項 ${totalPieces}件
                             </span>
                         </div>
-                        <span class="badge-stat text-xs font-bold px-2 py-1 rounded shadow-sm whitespace-nowrap">
-                            ${uniqueCategories}類 ${totalItems}項 ${totalPieces}件
-                        </span>
                     </div>
                     <div class="space-y-2">${entriesHtml}</div>
                 `;
@@ -593,7 +587,7 @@
                 fullSpan.classList.add('hidden');
                 shortSpan.classList.remove('hidden');
                 shortSpan.classList.add('max-h-20');
-                btn.innerHTML = `展開全部 <i class="fa-solid fa-chevron-down"></i>`;
+                btn.innerHTML = `展開全部 (${document.getElementById('full-'+id).childElementCount}) <i class="fa-solid fa-chevron-down"></i>`;
             }
         }
 
@@ -604,10 +598,12 @@
                 const typeFilter = document.getElementById('typeFilter').value;
                 if (monthFilter !== 'all' && row.month != monthFilter) return;
                 
-                if (typeFilter === '週保養' && !row.type.includes('週保養')) return;
-                if (typeFilter !== 'all' && typeFilter !== '週保養' && row.type !== typeFilter) return;
+                if (typeFilter !== 'all') {
+                    if (typeFilter === '週保養' && !row.type.includes('週保養')) return;
+                    if (typeFilter !== '週保養' && row.type !== typeFilter) return;
+                }
 
-                // Recalculate stats for visible entries in CSV context based on system filter
+                // Recalculate stats for CSV visible entries
                 const sysFilter = document.getElementById('sysFilter').value;
                 const visibleEntries = row.entries.filter(e => sysFilter === 'all' || e.sys === sysFilter);
                 
