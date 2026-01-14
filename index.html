@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>連進廠週保養保養查詢系統</title>
+    <title>115年 裝備管制 (官方期程版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <style>
@@ -13,7 +13,7 @@
             font-family: 'Noto Sans TC', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
             background-color: #f3f4f6; 
-            padding-bottom: 80px; 
+            padding-bottom: 40px; 
         }
         .font-mono { font-family: 'Roboto Mono', monospace; }
 
@@ -45,6 +45,29 @@
             position: fixed; top: 0; left: 0; right: 0; z-index: 50;
             background-color: #1e293b; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
+
+        #toast {
+            visibility: hidden;
+            min-width: 250px;
+            margin-left: -125px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 8px;
+            padding: 16px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            font-size: 16px;
+            opacity: 0;
+            transition: opacity 0.3s, bottom 0.3s;
+        }
+        #toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
     </style>
 </head>
 <body>
@@ -63,7 +86,7 @@
                 </div>
             </div>
             <button onclick="exportToCSV()" class="bg-emerald-600 active:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow flex items-center gap-2 transition-colors">
-                <i class="fa-solid fa-file-export"></i> 匯出報表
+                <i class="fa-solid fa-file-export"></i> 匯出
             </button>
         </div>
         
@@ -141,6 +164,9 @@
         </div>
     </div>
 
+    <!-- Toast -->
+    <div id="toast"><i class="fa-solid fa-check-circle text-green-400 mr-2"></i> 已複製到剪貼簿</div>
+
     <script>
         const naturalSort = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
         function parseList(str) {
@@ -180,7 +206,6 @@
         const filter_62_ids = Array(161).fill("62式");
         const t486_ids = Array(161).fill("消除包");
 
-        // CATEGORY MAPPING (For Stats)
         const sysCategories = {
             'T74': '兵器', 'T75': '兵器', 'T65K2': '兵器', 'T85': '兵器',
             'M1911A1': '兵器', 'M1911': '兵器',
@@ -209,7 +234,35 @@
         };
 
         let mergedData = [];
-        let currentYearROC = 116;
+        let currentYearROC = 115; 
+
+        // OFFICIAL 115 SCHEDULE DATES (Ranges converted to Mon/Tue/Wed)
+        // 1月: 19-21 (Mon-Wed)
+        // 2月: 23-25
+        // 3月: 23-25
+        // 4月: 20-22
+        // 5月: 25-27
+        // 6月: 22-24
+        // 7月: 20-22
+        // 8月: 24-26
+        // 9月: 21-23
+        // 10月: 19-21
+        // 11月: 23-25
+        // 12月: 21-23
+        const mainInspDates115 = {
+            1: { mon: 19, tue: 20, wed: 21, fri: 23 },
+            2: { mon: 23, tue: 24, wed: 25, fri: 27 }, // Feb 27 is Fri
+            3: { mon: 23, tue: 24, wed: 25, fri: 27 },
+            4: { mon: 20, tue: 21, wed: 22, fri: 24 },
+            5: { mon: 25, tue: 26, wed: 27, fri: 29 },
+            6: { mon: 22, tue: 23, wed: 24, fri: 26 },
+            7: { mon: 20, tue: 21, wed: 22, fri: 24 },
+            8: { mon: 24, tue: 25, wed: 26, fri: 28 },
+            9: { mon: 21, tue: 22, wed: 23, fri: 25 },
+            10: { mon: 19, tue: 20, wed: 21, fri: 23 },
+            11: { mon: 23, tue: 24, wed: 25, fri: 27 },
+            12: { mon: 21, tue: 22, wed: 23, fri: 25 }
+        };
 
         function isFixedHoliday(date) {
             const m = date.getMonth() + 1;
@@ -242,19 +295,6 @@
                 if (!isHolidayOrWeekend(date)) {
                     workDaysFound++;
                     if (workDaysFound === n) return date;
-                }
-                date.setDate(date.getDate() + 1);
-            }
-            return null;
-        }
-
-        function getNthWednesday(yearAD, month, n) {
-            let date = new Date(yearAD, month - 1, 1);
-            let wednesdaysFound = 0;
-            while (date.getMonth() === month - 1) {
-                if (date.getDay() === 3) { 
-                    wednesdaysFound++;
-                    if (wednesdaysFound === n) return date;
                 }
                 date.setDate(date.getDate() + 1);
             }
@@ -304,12 +344,26 @@
             const yearAD = currentYearROC + 1911;
 
             for (let m = 1; m <= 12; m++) {
-                const mainWed = getNthWeekday(yearAD, m, 4, 3);
-                let mainInspWeekKey = null;
-                if (mainWed) {
-                    let fri = new Date(mainWed);
-                    fri.setDate(mainWed.getDate() + 2);
-                    mainInspWeekKey = formatDate(fri).key;
+                
+                // Determine Main Inspection Dates based on Year 115 specific schedule or fallback to 4th week
+                let mainMonDate, mainTueDate, mainWedDate, mainFriDateKey;
+                
+                if (currentYearROC === 115) {
+                    const cfg = mainInspDates115[m];
+                    mainMonDate = new Date(yearAD, m-1, cfg.mon);
+                    mainTueDate = new Date(yearAD, m-1, cfg.tue);
+                    mainWedDate = new Date(yearAD, m-1, cfg.wed);
+                    mainFriDateKey = formatDate(new Date(yearAD, m-1, cfg.fri)).key; // Friday of Main Insp week to skip
+                } else {
+                    // Fallback Algorithm
+                    const mainWed = getNthWeekday(yearAD, m, 4, 3);
+                    if(mainWed) {
+                        mainWedDate = mainWed;
+                        mainTueDate = new Date(mainWed); mainTueDate.setDate(mainWed.getDate()-1);
+                        mainMonDate = new Date(mainWed); mainMonDate.setDate(mainWed.getDate()-2);
+                        let fri = new Date(mainWed); fri.setDate(mainWed.getDate()+2);
+                        mainFriDateKey = formatDate(fri).key;
+                    }
                 }
 
                 // T74 Logic
@@ -322,18 +376,27 @@
                 const t74_entry_list = t74_machines.filter(x => x.group === entryGroup).map(x => x.id);
                 rawEvents.push({ sys: 'T74', month: m, dateObj: formatDate(entryDateObj), type: '進廠', machines: t74_entry_list, remark: '排機 (免保)' });
 
-                const week3Fri = getNthWeekday(yearAD, m, 3, 5); 
-                
-                if (mainWed) {
-                    const mainFmt = formatDate(mainWed);
+                // Monthly Weekly Maint (Usually 1 week before main insp)
+                // For 115, we calculate Fri of the week before mainMonDate
+                let prevWeekFri;
+                if (currentYearROC === 115) {
+                    prevWeekFri = new Date(mainMonDate);
+                    prevWeekFri.setDate(prevWeekFri.getDate() - 3); // Mon - 3 = Prev Fri
+                } else {
+                    prevWeekFri = getNthWeekday(yearAD, m, 3, 5); 
+                }
+
+                if (mainWedDate) {
+                    const mainFmt = formatDate(mainWedDate);
                     const t74_maint_list = t74_machines.filter(x => x.group !== entryGroup).map(x => x.id);
                     
-                    if (week3Fri) {
-                        let validFri = new Date(week3Fri);
+                    if (prevWeekFri) {
+                        let validFri = new Date(prevWeekFri);
                         if(isFixedHoliday(validFri)) validFri = getNextWorkingDay(validFri);
                         const w3Fmt = formatDate(validFri);
                         
-                        if (w3Fmt.key !== mainInspWeekKey) {
+                        // Ensure it's not the same week (shouldn't be, but safety check)
+                        if (w3Fmt.key !== mainFriDateKey) {
                             const wn = getWeekNumber(validFri);
                             const lbl = `${currentYearROC}年第${wn}週週保養`;
                             rawEvents.push({ sys: 'T74', month: m, dateObj: w3Fmt, type: lbl, machines: t74_maint_list, remark: '連主檢前一週' });
@@ -371,7 +434,7 @@
                 const allFridays = getAllFridays(yearAD, m);
                 allFridays.forEach(fri => {
                     let validFri = new Date(fri);
-                    if (formatDate(validFri).key === mainInspWeekKey) return; 
+                    if (formatDate(validFri).key === mainFriDateKey) return; // SKIP MAIN INSP WEEK FRI
                     
                     let isDeferred = false;
                     if (isFixedHoliday(validFri)) {
@@ -397,7 +460,7 @@
                     let validFri = new Date(fri2);
                     if(isFixedHoliday(validFri)) validFri = getNextWorkingDay(validFri);
                     const f2Fmt = formatDate(validFri);
-                    if (f2Fmt.key !== mainInspWeekKey) {
+                    if (f2Fmt.key !== mainFriDateKey) {
                         const wn = getWeekNumber(validFri);
                         const lbl = `${currentYearROC}年第${wn}週週保養`;
                         const rem = '第2週';
@@ -409,14 +472,13 @@
                     }
                 }
 
-                // Main Inspection
-                if (mainWed) {
-                    // Mon
-                    let mainMon = new Date(mainWed);
-                    mainMon.setDate(mainWed.getDate() - 2);
-                    const monFmt = formatDate(mainMon);
+                // Main Inspection (Mon / Tue)
+                if (mainMonDate && mainTueDate) {
+                    const monFmt = formatDate(mainMonDate);
+                    const tueFmt = formatDate(mainTueDate);
                     const mainLbl = '連主官裝備檢查';
                     
+                    // Mon
                     rawEvents.push({ sys: 'M8A1', month: m, dateObj: monFmt, type: mainLbl, machines: m8a1_ids, remark: '週一' });
                     rawEvents.push({ sys: 'LS-920', month: m, dateObj: monFmt, type: mainLbl, machines: ls920_ids, remark: '週一' });
                     rawEvents.push({ sys: 'T3-75', month: m, dateObj: monFmt, type: mainLbl, machines: t375_ids, remark: '週一' });
@@ -426,9 +488,6 @@
                     rawEvents.push({ sys: 'T4-86', month: m, dateObj: monFmt, type: mainLbl, machines: t486_ids, remark: '週一' });
 
                     // Tue
-                    let mainTue = new Date(mainWed);
-                    mainTue.setDate(mainWed.getDate() - 1);
-                    const tueFmt = formatDate(mainTue);
                     rawEvents.push({ sys: 'TRUCK', month: m, dateObj: tueFmt, type: mainLbl, machines: truck_ids, remark: '週二' });
                 }
             }
@@ -447,6 +506,8 @@
                         entries: []
                     };
                 }
+                const naturalSort = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
+                e.machines.sort(naturalSort);
                 grouped[key].entries.push({ sys: e.sys, machines: e.machines, remark: e.remark });
             });
 
@@ -455,6 +516,61 @@
                 if (a.dateKey !== b.dateKey) return a.dateKey - b.dateKey;
                 return a.type.localeCompare(b.type);
             });
+        }
+
+        window.copyCardData = function(rowIndex) {
+            const row = mergedData[rowIndex];
+            const sysFilter = document.getElementById('sysFilter').value;
+            const searchInput = document.getElementById('searchInput').value.trim();
+
+            let visibleEntries = row.entries.filter(entry => {
+                if (sysFilter !== 'all' && entry.sys !== sysFilter) return false;
+                if (searchInput && !entry.machines.some(m => m.includes(searchInput))) return false;
+                return true;
+            });
+
+            if(visibleEntries.length === 0) return;
+
+            const uniqueCategories = new Set(visibleEntries.map(e => sysCategories[e.sys])).size;
+            const totalItems = visibleEntries.length;
+            const totalPieces = visibleEntries.reduce((acc, curr) => acc + curr.machines.length, 0);
+
+            // Format: 115/01/02
+            const dateParts = row.date.split('.'); 
+            const formattedDate = `${currentYearROC}/${dateParts[0]}/${dateParts[1]}`;
+
+            let text = `📅 ${formattedDate} (${row.day})\n`;
+            text += `📝 任務：${row.type}\n`;
+            text += `📊 統計：${uniqueCategories}類 ${totalItems}項 ${totalPieces}件\n`;
+            text += `------------------------\n`;
+
+            visibleEntries.forEach((entry, idx) => {
+                const sysName = sysNames[entry.sys];
+                const count = entry.machines.length;
+                const isBulk = ['T3-75', 'M256', 'WAR_FILTER', '62_FILTER', 'T4-86'].includes(entry.sys);
+                
+                text += `${idx+1}. ${sysName} (${count}件)\n`;
+                if(!isBulk) {
+                    text += `   序號: ${entry.machines.join(', ')}\n`;
+                }
+                text += `   備註：${entry.remark}\n`;
+            });
+            
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            try {
+                document.execCommand('copy');
+                const toast = document.getElementById('toast');
+                toast.classList.add('show');
+                setTimeout(() => toast.classList.remove('show'), 2000);
+            } catch (err) {
+                alert('複製失敗，請手動複製');
+            }
+            
+            document.body.removeChild(textarea);
         }
 
         // --- RENDER ---
@@ -472,7 +588,9 @@
 
             mergedData.forEach((row, rowIndex) => {
                 let visibleEntries = row.entries.filter(entry => {
+                    // System Filter (Simple name matching)
                     if (sysFilter !== 'all' && entry.sys !== sysFilter) return false;
+
                     if (searchInput) {
                         const sysName = sysNames[entry.sys];
                         if (sysName.includes(searchInput)) return true;
@@ -491,13 +609,15 @@
                 if (visibleEntries.length === 0) return;
 
                 hasData = true;
-
-                // --- STATS CALC ---
+                
+                // --- CATEGORY STATS LOGIC ---
                 const uniqueCategories = new Set(visibleEntries.map(e => sysCategories[e.sys])).size;
                 const totalItems = visibleEntries.length;
                 const totalPieces = visibleEntries.reduce((acc, curr) => acc + curr.machines.length, 0);
 
                 let cardClass = '', badgeClass = '', icon = '';
+                let titleText = row.type;
+                
                 if (row.type === '進廠') {
                     cardClass = 'card-entry'; badgeClass = 'badge-entry'; icon = 'fa-truck-arrow-right';
                 } else if (row.type.includes('連主官')) {
@@ -548,6 +668,7 @@
 
                 const card = document.createElement('div');
                 card.className = `bg-white rounded-lg shadow-sm border border-gray-100 p-4 ${cardClass}`;
+                
                 card.innerHTML = `
                     <div class="flex justify-between items-start mb-3">
                         <div>
@@ -555,12 +676,17 @@
                                 ${row.date}
                                 <span class="text-lg font-normal text-slate-500">(${row.day})</span>
                             </div>
-                            <div class="text-xs text-slate-400 mt-1">民國${currentYearROC}年 ${row.month}月</div>
+                            <!-- Date info removed from here as requested -->
                         </div>
                         <div class="flex flex-col items-end gap-1">
-                            <span class="text-xs font-bold px-2 py-1 rounded flex items-center gap-1 ${badgeClass}">
-                                <i class="fa-solid ${icon}"></i> ${row.type}
-                            </span>
+                            <div class="flex items-center gap-2">
+                                <button onclick="copyCardData(${rowIndex})" class="text-slate-400 hover:text-emerald-600 transition-colors p-1" title="複製到LINE">
+                                    <i class="fa-regular fa-copy text-lg"></i>
+                                </button>
+                                <span class="text-xs font-bold px-2 py-1 rounded flex items-center gap-1 ${badgeClass}">
+                                    <i class="fa-solid ${icon}"></i> ${titleText}
+                                </span>
+                            </div>
                             <span class="badge-stat text-xs font-bold px-2 py-1 rounded shadow-sm">
                                 ${uniqueCategories}類 ${totalItems}項 ${totalPieces}件
                             </span>
@@ -598,12 +724,9 @@
                 const typeFilter = document.getElementById('typeFilter').value;
                 if (monthFilter !== 'all' && row.month != monthFilter) return;
                 
-                if (typeFilter !== 'all') {
-                    if (typeFilter === '週保養' && !row.type.includes('週保養')) return;
-                    if (typeFilter !== '週保養' && row.type !== typeFilter) return;
-                }
+                if (typeFilter === '週保養' && !row.type.includes('週保養')) return;
+                if (typeFilter !== 'all' && typeFilter !== '週保養' && row.type !== typeFilter) return;
 
-                // Recalculate stats for CSV visible entries
                 const sysFilter = document.getElementById('sysFilter').value;
                 const visibleEntries = row.entries.filter(e => sysFilter === 'all' || e.sys === sysFilter);
                 
@@ -617,16 +740,14 @@
                     const isBulk = ['T3-75', 'M256', 'WAR_FILTER', '62_FILTER', 'T4-86'].includes(entry.sys);
                     const machinesStr = isBulk ? "無序號 (批量)" : `"${entry.machines.join('、')}"`;
                     const sysFullName = sysNames[entry.sys];
-                    csvContent += `${currentYearROC}年,${row.month}月,${row.date},${row.day},${row.type},${uniqueCategories},${totalItems},${totalPieces},${sysFullName},${entry.machines.length},${machinesStr},${entry.remark}\n`;
+                    csvContent += `115年,${row.month}月,${row.date},${row.day},${row.type},${uniqueCategories},${totalItems},${totalPieces},${sysFullName},${entry.machines.length},${machinesStr},${entry.remark}\n`;
                 });
             });
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
-            const now = new Date();
-            const timeStr = now.toISOString().slice(0,10).replace(/-/g,"");
             link.setAttribute("href", url);
-            link.setAttribute("download", `武器任務表_${currentYearROC}年_${timeStr}.csv`);
+            link.setAttribute("download", `武器任務表_115年_完美版.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
