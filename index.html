@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>115年 裝備管制 (官方期程版)</title>
+    <title>115年 裝備管制 (固定編號版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <style>
@@ -13,7 +13,7 @@
             font-family: 'Noto Sans TC', sans-serif; 
             -webkit-tap-highlight-color: transparent; 
             background-color: #f3f4f6; 
-            padding-bottom: 40px; 
+            padding-bottom: 80px; 
         }
         .font-mono { font-family: 'Roboto Mono', monospace; }
 
@@ -155,9 +155,9 @@
     </div>
 
     <!-- Main Content -->
-    <div id="cardContainer" class="pt-[180px] p-3 space-y-4 max-w-2xl mx-auto"></div>
+    <div id="cardContainer" class="pt-[220px] p-3 space-y-4 max-w-2xl mx-auto"></div>
     
-    <div id="noData" class="hidden pt-[200px] text-center text-gray-400">
+    <div id="noData" class="hidden pt-[240px] text-center text-gray-400">
         <div class="flex flex-col items-center">
             <i class="fa-solid fa-clipboard-list text-6xl mb-4 text-gray-300"></i>
             <p class="text-lg font-medium">沒有符合條件的資料</p>
@@ -168,39 +168,116 @@
     <div id="toast"><i class="fa-solid fa-check-circle text-green-400 mr-2"></i> 已複製到剪貼簿</div>
 
     <script>
+        // Global Map to store fixed indices for each ID
+        const machineIndexMap = new Map();
+
         const naturalSort = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
-        function parseList(str) {
-            if(!str) return [];
-            return str.replace(/\n/g, ',').split(',').map(s => s.trim()).filter(id => id && id.length > 0).sort(naturalSort);
+        
+        // Helper to register machines with fixed indices
+        function registerMachines(rawStr, startIdx = 1, parseWithIndex = false) {
+            if (!rawStr) return [];
+            let list = [];
+            // Normalize newlines to commas for splitting
+            const items = rawStr.replace(/\n/g, ',').split(',');
+            
+            let currentAutoIndex = startIdx;
+
+            items.forEach((item) => {
+                let s = item.trim();
+                if (!s) return;
+                
+                let id = s;
+                let index = currentAutoIndex;
+
+                if (parseWithIndex) {
+                    // Try to parse "1 007231" format
+                    const parts = s.split(/\s+/);
+                    if (parts.length > 1) {
+                        // Assume last part is ID, first part is Index
+                        id = parts[parts.length - 1];
+                        index = parts[0].replace('.', ''); // Remove potential dot
+                    } else {
+                        // Fallback
+                        id = s;
+                    }
+                }
+                
+                // Store in Map (ID -> Index)
+                // Use a key prefix if IDs might collide across systems, 
+                // but usually serials are unique enough or context is separated.
+                // We'll trust IDs are unique or we can just update.
+                machineIndexMap.set(id, index);
+                list.push(id);
+                
+                if (!parseWithIndex) currentAutoIndex++;
+            });
+            
+            // If we didn't parse indices, we sort naturally to ensure 1, 2, 3 aligns with sorted IDs
+            if (!parseWithIndex) {
+                list.sort(naturalSort);
+                // Re-assign indices after sort to ensure 1 is lowest ID, etc.
+                list.forEach((id, i) => {
+                    machineIndexMap.set(id, startIdx + i);
+                });
+            } else {
+                // If parsed with index, we trust the input order implies the index
+                // but we still sort the return list for display purposes if needed, 
+                // BUT we must keep the map pointing to original index labels if they were specific.
+                // Actually, the prompt implies "1 007231" is the label.
+                list.sort(naturalSort); 
+            }
+            
+            return list;
         }
 
-        // RAW DATA
-        const t74_machines = [
-            { id: "007231", group: 1 }, { id: "007447", group: 1 }, { id: "007496", group: 2 }, { id: "007501", group: 2 }, 
-            { id: "007544", group: 2 }, { id: "007654", group: 3 }, { id: "009661", group: 3 }, { id: "009971", group: 3 }
-        ];
+        // --- DATA POPULATION ---
 
-        const t75_list_raw = `1 008727, 2 008749, 3 008788, 4 008805, 5 008870, 6 008899, 7 008950, 8 009043, 9 009097, 10 009109, 11 012244, 12 012247, 13 012459, 14 012610, 15 012627, 16 012864, 17 012865, 18 012880, 19 012919, 20 012925, 21 012928, 22 012931, 23 012933, 24 012943, 25 012946, 26 012954, 27 012959, 28 012962, 29 012964, 30 012967, 31 013026, 32 013029, 33 013031, 34 013032, 35 013038, 36 013039`;
-        let t75_machines = [];
-        t75_list_raw.replace(/\n/g, ',').split(',').forEach(s => {
-            const parts = s.trim().split(' ');
-            if(parts.length > 0) t75_machines.push(parts[parts.length-1]);
+        // T74: Explicitly numbered 1-8
+        const t74_raw = `1 007231, 2 007447, 3 007496, 4 007501, 5 007544, 6 007654, 7 009661, 8 009971`;
+        const t74_ids = registerMachines(t74_raw, 1, true);
+        const t74_machines = t74_ids.map(id => {
+            // Determine group based on fixed index. 
+            // 1,2 -> Group 1; 3,4,5 -> Group 2; 6,7,8 -> Group 3
+            // Logic derived from: 
+            // Group 1 (1, 4, 7, 10月 Entry) -> User said "1 007231, 2 007447" are in Jan. So Index 1,2 are Grp 1.
+            // Previous logic: machines.filter((x, i) => i < 2) was group 1.
+            // So: Index 1, 2 = Group 1. Index 3, 4, 5 = Group 2. Index 6, 7, 8 = Group 3.
+            const idx = parseInt(machineIndexMap.get(id));
+            let grp = 3;
+            if (idx <= 2) grp = 1;
+            else if (idx <= 5) grp = 2;
+            return { id: id, group: grp };
         });
-        t75_machines.sort(naturalSort);
-        const t75_data = t75_machines.map((id, idx) => ({ id: id, group: (idx + 1) <= 18 ? 'A' : 'B' }));
 
-        const t65k2_ids = parseList(`186074, 187921, 193648, 207145, 209263, 209439, 209697, 209823, 219834, 220007, 221303, 221554, 221566, 221640, 224376, 230470, 231016, 231849, 232622, 234718, 234742, 236236, 236465, 236967, 237338, 314846, 332587, 332607, 332668, 332754, 332762, 337624, 362245, 362411, 362415, 362676, 363053, 364122, 364896, 367128, 367730, 368657, 369550, 370013, 370200, 370374, 383020, 383715, 385207, 385332, 386038, 386251, 386399, 388131, 389145, 389516, 390010, 390539, 391124, 391958, 392012, 392166, 392167, 393872, 393947, 394347, 394468, 394681, 394777, 394861, 394863, 394902, 394907, 394913, 394923, 395042, 395065, 395109, 395113, 395167, 395348, 395555, 395671, 395860, 396172, 396176, 396207, 396356, 396359, 396597, 397068, 397153, 397273, 397314, 398005, 398192, 398389, 398432, 398934, 399146, 399327, 399595, 400655, 400847, 401766, 402894, 403128, 403843, 404390, 405120, 405205, 405700, 406970, 407492, 407620, 408250`);
-        const t85_ids = parseList(`000032, 000155, 001750, 001780, 001998, 008454, 008834, 008890, 009004, 009759, 010532, 010681, 011186, 011293, 011358, 011498, 011522, 011662, 011820, 011906, 012571, 012589, 012695, 012760, 012775, 012845, 014580, 016641, 018164, 018390, 019120, 019191, 019202, 019261, 019674, 021606`);
-        const m1911a1_ids = ["51-06411"];
-        const m1911_ids = parseList(`124141, 1546783, 1810911, 1943969, 1952496, 2215347, 2226406, 954710`);
-        const m8a1_ids = ["1010413"];
-        const ls920_ids = ["513", "514"];
-        const mhr112_ids = parseList(`LV11203353, LV11203354, LV11203355, LV11203356, LV11203357, LV11203358, LV11203359, LV11203360, LV11203361, LV11203362, LV11203363, LV11203364, LV11203365, LV11203366, LV11203367, LV11203368, LV11203369, LV11203370, LV11203371, LV11203372, LV11203373`);
-        const prc37c_ids = ["22250"];
-        const ky2000_ids = parseList(`714-T02378, 714-T02422, 714-T02628, 714-T02647, 714-T03864, 714-T13385, 714-T13867, 714-T13873, 714-T14184, 714-T14238, 714-T15582, 714-T17758, 714-T17764, 714-T03057, 714-T15596, 714-T14095`);
-        const truck_ids = ["軍3-23993"];
-        // Engineering
-        const compass_ids = parseList(`V-109J-0D07-0374, 900288, 9105443, 9100940`);
+        // T75: Raw list has indices
+        const t75_raw = `1 008727, 2 008749, 3 008788, 4 008805, 5 008870, 6 008899, 7 008950, 8 009043, 9 009097, 10 009109, 11 012244, 12 012247, 13 012459, 14 012610, 15 012627, 16 012864, 17 012865, 18 012880, 19 012919, 20 012925, 21 012928, 22 012931, 23 012933, 24 012943, 25 012946, 26 012954, 27 012959, 28 012962, 29 012964, 30 012967, 31 013026, 32 013029, 33 013031, 34 013032, 35 013038, 36 013039`;
+        const t75_ids = registerMachines(t75_raw, 1, true);
+        const t75_data = t75_ids.map(id => {
+            const idx = parseInt(machineIndexMap.get(id));
+            return { id: id, group: idx <= 18 ? 'A' : 'B' };
+        });
+
+        // T65K2: Raw list has indices
+        const t65k2_raw = `1 186074, 2 187921, 3 193648, 4 207145, 5 209263, 6 209439, 7 209697, 8 209823, 9 219834, 10 220007, 11 221303, 12 221554, 13 221566, 14 221640, 15 224376, 16 230470, 17 231016, 18 231849, 19 232622, 20 234718, 21 234742, 22 236236, 23 236465, 24 236967, 25 237338, 26 314846, 27 332587, 28 332607, 29 332668, 30 332754, 31 332762, 32 337624, 33 362245, 34 362411, 35 362415, 36 362676, 37 363053, 38 364122, 39 364896, 40 367128, 41 367730, 42 368657, 43 369550, 44 370013, 45 370200, 46 370374, 47 383020, 48 383715, 49 385207, 50 385332, 51 386038, 52 386251, 53 386399, 54 388131, 55 389145, 56 389516, 57 390010, 58 390539, 59 391124, 60 391958, 61 392012, 62 392166, 63 392167, 64 393872, 65 393947, 66 394347, 67 394468, 68 394681, 69 394777, 70 394861, 71 394863, 72 394902, 73 394907, 74 394913, 75 394923, 76 395042, 77 395065, 78 395109, 79 395113, 80 395167, 81 395348, 82 395555, 83 395671, 84 395860, 85 396172, 86 396176, 87 396207, 88 396356, 89 396359, 90 396597, 91 397068, 92 397153, 93 397273, 94 397314, 95 398005, 96 398192, 97 398389, 98 398432, 99 398934, 100 399146, 101 399327, 102 399595, 103 400655, 104 400847, 105 401766, 106 402894, 107 403128, 108 403843, 109 404390, 110 405120, 111 405205, 112 405700, 113 406970, 114 407492, 115 407620, 116 408250`;
+        const t65k2_ids = registerMachines(t65k2_raw, 1, true);
+
+        // T85: No explicit indices in prompt, so we auto-number 1..N sorted
+        const t85_raw = `000032, 000155, 001750, 001780, 001998, 008454, 008834, 008890, 009004, 009759, 010532, 010681, 011186, 011293, 011358, 011498, 011522, 011662, 011820, 011906, 012571, 012589, 012695, 012760, 012775, 012845, 014580, 016641, 018164, 018390, 019120, 019191, 019202, 019261, 019674, 021606`;
+        const t85_ids = registerMachines(t85_raw, 1, false);
+
+        // Others: Auto-number
+        const m1911a1_ids = registerMachines("51-06411", 1, false);
+        const m1911_ids = registerMachines(`124141, 1546783, 1810911, 1943969, 1952496, 2215347, 2226406, 954710`, 1, false);
+        const m8a1_ids = registerMachines("1010413", 1, false);
+        const ls920_ids = registerMachines("513, 514", 1, false);
+        const mhr112_ids = registerMachines(`LV11203353, LV11203354, LV11203355, LV11203356, LV11203357, LV11203358, LV11203359, LV11203360, LV11203361, LV11203362, LV11203363, LV11203364, LV11203365, LV11203366, LV11203367, LV11203368, LV11203369, LV11203370, LV11203371, LV11203372, LV11203373`, 1, false); // Assuming sequential from user list or sorted? User list looks sequential. registerMachines with false will sort them.
+        
+        const prc37c_ids = registerMachines("22250", 1, false);
+        const ky2000_ids = registerMachines(`714-T02378, 714-T02422, 714-T02628, 714-T02647, 714-T03864, 714-T13385, 714-T13867, 714-T13873, 714-T14184, 714-T14238, 714-T15582, 714-T15596, 714-T14095, 714-T17758, 714-T17764`, 1, false);
+        const truck_ids = registerMachines("軍3-23993", 1, false);
+        const compass_ids = registerMachines(`V-109J-0D07-0374, 900288, 9105443, 9100940`, 1, false);
+
+        // Bulk Items (Dummy IDs for counting)
         const t375_ids = Array(161).fill("量產型");
         const m256_ids = Array(1).fill("偵檢包");
         const filter_war_ids = Array(161).fill("戰備罐");
@@ -237,22 +314,10 @@
         let mergedData = [];
         let currentYearROC = 115; 
 
-        // OFFICIAL 115 SCHEDULE DATES (Ranges converted to Mon/Tue/Wed)
-        // 1月: 19-21 (Mon-Wed)
-        // 2月: 23-25
-        // 3月: 23-25
-        // 4月: 20-22
-        // 5月: 25-27
-        // 6月: 22-24
-        // 7月: 20-22
-        // 8月: 24-26
-        // 9月: 21-23
-        // 10月: 19-21
-        // 11月: 23-25
-        // 12月: 21-23
+        // OFFICIAL 115 SCHEDULE
         const mainInspDates115 = {
             1: { mon: 19, tue: 20, wed: 21, fri: 23 },
-            2: { mon: 23, tue: 24, wed: 25, fri: 27 }, // Feb 27 is Fri
+            2: { mon: 23, tue: 24, wed: 25, fri: 27 },
             3: { mon: 23, tue: 24, wed: 25, fri: 27 },
             4: { mon: 20, tue: 21, wed: 22, fri: 24 },
             5: { mon: 25, tue: 26, wed: 27, fri: 29 },
@@ -296,6 +361,19 @@
                 if (!isHolidayOrWeekend(date)) {
                     workDaysFound++;
                     if (workDaysFound === n) return date;
+                }
+                date.setDate(date.getDate() + 1);
+            }
+            return null;
+        }
+
+        function getNthWednesday(yearAD, month, n) {
+            let date = new Date(yearAD, month - 1, 1);
+            let wednesdaysFound = 0;
+            while (date.getMonth() === month - 1) {
+                if (date.getDay() === 3) { 
+                    wednesdaysFound++;
+                    if (wednesdaysFound === n) return date;
                 }
                 date.setDate(date.getDate() + 1);
             }
@@ -346,7 +424,6 @@
 
             for (let m = 1; m <= 12; m++) {
                 
-                // Determine Main Inspection Dates based on Year 115 specific schedule or fallback to 4th week
                 let mainMonDate, mainTueDate, mainWedDate, mainFriDateKey;
                 
                 if (currentYearROC === 115) {
@@ -354,9 +431,8 @@
                     mainMonDate = new Date(yearAD, m-1, cfg.mon);
                     mainTueDate = new Date(yearAD, m-1, cfg.tue);
                     mainWedDate = new Date(yearAD, m-1, cfg.wed);
-                    mainFriDateKey = formatDate(new Date(yearAD, m-1, cfg.fri)).key; // Friday of Main Insp week to skip
+                    mainFriDateKey = formatDate(new Date(yearAD, m-1, cfg.fri)).key; 
                 } else {
-                    // Fallback Algorithm
                     const mainWed = getNthWeekday(yearAD, m, 4, 3);
                     if(mainWed) {
                         mainWedDate = mainWed;
@@ -377,14 +453,10 @@
                 const t74_entry_list = t74_machines.filter(x => x.group === entryGroup).map(x => x.id);
                 rawEvents.push({ sys: 'T74', month: m, dateObj: formatDate(entryDateObj), type: '進廠', machines: t74_entry_list, remark: '排機 (免保)' });
 
-                // Monthly Weekly Maint (Usually 1 week before main insp)
-                // For 115, we calculate Fri of the week before mainMonDate
                 let prevWeekFri;
-                if (currentYearROC === 115) {
+                if (mainMonDate) {
                     prevWeekFri = new Date(mainMonDate);
-                    prevWeekFri.setDate(prevWeekFri.getDate() - 3); // Mon - 3 = Prev Fri
-                } else {
-                    prevWeekFri = getNthWeekday(yearAD, m, 3, 5); 
+                    prevWeekFri.setDate(prevWeekFri.getDate() - 3); 
                 }
 
                 if (mainWedDate) {
@@ -396,7 +468,6 @@
                         if(isFixedHoliday(validFri)) validFri = getNextWorkingDay(validFri);
                         const w3Fmt = formatDate(validFri);
                         
-                        // Ensure it's not the same week (shouldn't be, but safety check)
                         if (w3Fmt.key !== mainFriDateKey) {
                             const wn = getWeekNumber(validFri);
                             const lbl = `${currentYearROC}年第${wn}週週保養`;
@@ -417,7 +488,6 @@
                     rawEvents.push({ sys: 'COMPASS', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: compass_ids, remark: '第4週 (週三)' });
                 }
 
-                // T75 Logic
                 const wd1 = getWorkingDay(yearAD, m, 1);
                 const wd2 = getWorkingDay(yearAD, m, 2);
                 const grpA = t75_data.filter(x => x.group === 'A').map(x => x.id);
@@ -425,17 +495,15 @@
                 rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd1), type: '進廠', machines: grpA, remark: '班機 1-18' });
                 rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd2), type: '進廠', machines: grpB, remark: '班機 19-36' });
 
-                // Entries (Others)
                 rawEvents.push({ sys: 'MHR-112', month: m, dateObj: formatDate(wd1), type: '進廠', machines: mhr112_ids, remark: '第1工作日' });
                 rawEvents.push({ sys: 'PRC-37C', month: m, dateObj: formatDate(wd1), type: '進廠', machines: prc37c_ids, remark: '第1工作日' });
                 rawEvents.push({ sys: 'M8A1', month: m, dateObj: formatDate(wd2), type: '進廠', machines: m8a1_ids, remark: '第2工作日' });
                 rawEvents.push({ sys: 'LS-920', month: m, dateObj: formatDate(wd2), type: '進廠', machines: ls920_ids, remark: '第2工作日' });
 
-                // Weekly Maint
                 const allFridays = getAllFridays(yearAD, m);
                 allFridays.forEach(fri => {
                     let validFri = new Date(fri);
-                    if (formatDate(validFri).key === mainFriDateKey) return; // SKIP MAIN INSP WEEK FRI
+                    if (formatDate(validFri).key === mainFriDateKey) return; 
                     
                     let isDeferred = false;
                     if (isFixedHoliday(validFri)) {
@@ -455,7 +523,6 @@
                     rawEvents.push({ sys: 'TRUCK', month: m, dateObj: friFmt, type: lbl, machines: truck_ids, remark: rem });
                 });
 
-                // New Chem Items (Week 2 Fri)
                 const fri2 = getNthWeekday(yearAD, m, 2, 5);
                 if (fri2) {
                     let validFri = new Date(fri2);
@@ -473,13 +540,11 @@
                     }
                 }
 
-                // Main Inspection (Mon / Tue)
                 if (mainMonDate && mainTueDate) {
                     const monFmt = formatDate(mainMonDate);
                     const tueFmt = formatDate(mainTueDate);
                     const mainLbl = '連主官裝備檢查';
                     
-                    // Mon
                     rawEvents.push({ sys: 'M8A1', month: m, dateObj: monFmt, type: mainLbl, machines: m8a1_ids, remark: '週一' });
                     rawEvents.push({ sys: 'LS-920', month: m, dateObj: monFmt, type: mainLbl, machines: ls920_ids, remark: '週一' });
                     rawEvents.push({ sys: 'T3-75', month: m, dateObj: monFmt, type: mainLbl, machines: t375_ids, remark: '週一' });
@@ -487,13 +552,10 @@
                     rawEvents.push({ sys: 'WAR_FILTER', month: m, dateObj: monFmt, type: mainLbl, machines: filter_war_ids, remark: '週一' });
                     rawEvents.push({ sys: '62_FILTER', month: m, dateObj: monFmt, type: mainLbl, machines: filter_62_ids, remark: '週一' });
                     rawEvents.push({ sys: 'T4-86', month: m, dateObj: monFmt, type: mainLbl, machines: t486_ids, remark: '週一' });
-
-                    // Tue
                     rawEvents.push({ sys: 'TRUCK', month: m, dateObj: tueFmt, type: mainLbl, machines: truck_ids, remark: '週二' });
                 }
             }
 
-            // Merge
             let grouped = {};
             rawEvents.forEach(e => {
                 const key = `${e.dateObj.str}_${e.type}`;
@@ -507,8 +569,12 @@
                         entries: []
                     };
                 }
-                const naturalSort = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
-                e.machines.sort(naturalSort);
+                
+                // Sort machines naturally inside each entry
+                if (e.sys !== 'T74' && e.sys !== 'T75' && !['T3-75', 'M256', 'WAR_FILTER', '62_FILTER', 'T4-86'].includes(e.sys)) {
+                     e.machines.sort(naturalSort);
+                }
+                
                 grouped[key].entries.push({ sys: e.sys, machines: e.machines, remark: e.remark });
             });
 
@@ -536,7 +602,6 @@
             const totalItems = visibleEntries.length;
             const totalPieces = visibleEntries.reduce((acc, curr) => acc + curr.machines.length, 0);
 
-            // Format: 115/01/02
             const dateParts = row.date.split('.'); 
             const formattedDate = `${currentYearROC}/${dateParts[0]}/${dateParts[1]}`;
 
@@ -570,11 +635,9 @@
             } catch (err) {
                 alert('複製失敗，請手動複製');
             }
-            
             document.body.removeChild(textarea);
         }
 
-        // --- RENDER ---
         function renderCards() {
             const container = document.getElementById('cardContainer');
             const noData = document.getElementById('noData');
@@ -589,9 +652,7 @@
 
             mergedData.forEach((row, rowIndex) => {
                 let visibleEntries = row.entries.filter(entry => {
-                    // System Filter (Simple name matching)
                     if (sysFilter !== 'all' && entry.sys !== sysFilter) return false;
-
                     if (searchInput) {
                         const sysName = sysNames[entry.sys];
                         if (sysName.includes(searchInput)) return true;
@@ -611,7 +672,6 @@
 
                 hasData = true;
                 
-                // --- CATEGORY STATS LOGIC ---
                 const uniqueCategories = new Set(visibleEntries.map(e => sysCategories[e.sys])).size;
                 const totalItems = visibleEntries.length;
                 const totalPieces = visibleEntries.reduce((acc, curr) => acc + curr.machines.length, 0);
@@ -636,9 +696,11 @@
                     if (isBulk) {
                         listHtml = `<div class="text-sm font-bold text-gray-500">批量管制 (無序號)</div>`;
                     } else {
-                        const chips = entry.machines.map((id, idx) => 
-                            `<span class="inline-block bg-white border border-gray-200 rounded px-1.5 py-0.5 mr-1 mb-1 text-xs text-gray-700 font-mono"><span class="text-gray-400 select-none mr-1">${idx+1}.</span>${id}</span>`
-                        ).join('');
+                        // Get explicit index for each ID
+                        const chips = entry.machines.map(id => {
+                            const fixedIdx = machineIndexMap.get(id) || '?';
+                            return `<span class="inline-block bg-white border border-gray-200 rounded px-1.5 py-0.5 mr-1 mb-1 text-xs text-gray-700 font-mono"><span class="text-gray-400 select-none mr-1">${fixedIdx}.</span>${id}</span>`;
+                        }).join('');
 
                         if (count > 20) {
                             listHtml = `
@@ -671,24 +733,20 @@
                 card.className = `bg-white rounded-lg shadow-sm border border-gray-100 p-4 ${cardClass}`;
                 
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <div class="text-3xl font-bold text-slate-800 leading-none">
-                                ${row.date}
-                                <span class="text-lg font-normal text-slate-500">(${row.day})</span>
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center gap-2">
+                            <div class="text-xl font-bold text-slate-800 leading-none">
+                                ${row.date} (${row.day})
                             </div>
-                            <!-- Date info removed from here as requested -->
+                            <span class="text-xl font-bold px-2 py-1 rounded flex items-center gap-1 ${badgeClass} whitespace-nowrap h-fit">
+                                ${row.type}
+                            </span>
                         </div>
-                        <div class="flex flex-col items-end gap-1">
-                            <div class="flex items-center gap-2">
-                                <button onclick="copyCardData(${rowIndex})" class="text-slate-400 hover:text-emerald-600 transition-colors p-1" title="複製到LINE">
-                                    <i class="fa-regular fa-copy text-lg"></i>
-                                </button>
-                                <span class="text-xs font-bold px-2 py-1 rounded flex items-center gap-1 ${badgeClass}">
-                                    <i class="fa-solid ${icon}"></i> ${titleText}
-                                </span>
-                            </div>
-                            <span class="badge-stat text-xs font-bold px-2 py-1 rounded shadow-sm">
+                        <div class="flex items-center gap-2">
+                            <button onclick="copyCardData(${rowIndex})" class="text-slate-400 hover:text-emerald-600 transition-colors p-1" title="複製到LINE">
+                                <i class="fa-regular fa-copy text-lg"></i>
+                            </button>
+                            <span class="badge-stat text-xs font-bold px-2 py-1 rounded shadow-sm whitespace-nowrap">
                                 ${uniqueCategories}類 ${totalItems}項 ${totalPieces}件
                             </span>
                         </div>
@@ -739,16 +797,28 @@
 
                 visibleEntries.forEach(entry => {
                     const isBulk = ['T3-75', 'M256', 'WAR_FILTER', '62_FILTER', 'T4-86'].includes(entry.sys);
-                    const machinesStr = isBulk ? "無序號 (批量)" : `"${entry.machines.join('、')}"`;
+                    // Use fixed indices in CSV too
+                    let machinesStr = "";
+                    if (isBulk) {
+                        machinesStr = "無序號 (批量)";
+                    } else {
+                        machinesStr = '"' + entry.machines.map(id => {
+                            const idx = machineIndexMap.get(id) || '?';
+                            return `${idx}. ${id}`;
+                        }).join('、') + '"';
+                    }
+                    
                     const sysFullName = sysNames[entry.sys];
-                    csvContent += `115年,${row.month}月,${row.date},${row.day},${row.type},${uniqueCategories},${totalItems},${totalPieces},${sysFullName},${entry.machines.length},${machinesStr},${entry.remark}\n`;
+                    csvContent += `${currentYearROC}年,${row.month}月,${row.date},${row.day},${row.type},${uniqueCategories},${totalItems},${totalPieces},${sysFullName},${entry.machines.length},${machinesStr},${entry.remark}\n`;
                 });
             });
             const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             const url = URL.createObjectURL(blob);
+            const now = new Date();
+            const timeStr = now.toISOString().slice(0,10).replace(/-/g,"");
             link.setAttribute("href", url);
-            link.setAttribute("download", `武器任務表_115年_完美版.csv`);
+            link.setAttribute("download", `武器任務表_${currentYearROC}年_${timeStr}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -779,5 +849,4 @@
     </script>
 </body>
 </html>
-
 
