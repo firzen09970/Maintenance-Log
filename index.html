@@ -9,35 +9,28 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
         body { font-family: 'Noto Sans TC', sans-serif; background: #f3f4f6; padding-bottom: 40px; }
         
-        /* Category Colors - Specific for Border Left & Text */
-        /* 兵器 - 紅 */
+        /* Category Colors */
         .theme-weap { --main-col: #ef4444; --bg-col: #fef2f2; --text-col: #991b1b; } 
-        /* 通信 - 藍 */
         .theme-comm { --main-col: #0ea5e9; --bg-col: #e0f2fe; --text-col: #075985; }
-        /* 化學 - 青 */
         .theme-chem { --main-col: #14b8a6; --bg-col: #ccfbf1; --text-col: #115e59; }
-        /* 輪車 - 灰 */
         .theme-truck { --main-col: #64748b; --bg-col: #f1f5f9; --text-col: #334155; }
-        /* 工兵 - 橘 */
         .theme-eng { --main-col: #f59e0b; --bg-col: #fef3c7; --text-col: #92400e; }
 
         /* Card Styles */
         .card-base { position: relative; overflow: hidden; transition: transform 0.1s; }
         .card-base:active { transform: scale(0.99); }
 
-        /* Equipment System Card (Small Card) */
         .sys-card { 
             border-radius: 6px; 
             margin-bottom: 8px; 
             transition: all 0.2s; 
             background-color: white;
             border: 1px solid #e5e7eb; 
-            border-left-width: 5px; /* Thicker left border for category color */
-            border-left-color: var(--main-col); /* Use CSS variable */
+            border-left-width: 5px; 
+            border-left-color: var(--main-col); 
         }
         .sys-card:hover { transform: translateX(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-        /* Tag Style inside Sys Card */
         .sys-tag {
             background-color: var(--bg-col);
             color: var(--text-col);
@@ -47,7 +40,6 @@
             font-weight: bold;
         }
 
-        /* Utility */
         .chevron { transition: transform 0.2s; }
         .expanded .chevron { transform: rotate(180deg); }
         #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 50px; opacity: 0; transition: opacity 0.3s, bottom 0.3s; pointer-events: none; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 14px; display: flex; align-items: center; gap: 8px; font-weight: 500;}
@@ -56,9 +48,13 @@
 
         /* Badge for task type */
         .badge-task { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
-        .task-entry { background: #fee2e2; color: #b91c1c; }
-        .task-main { background: #dbeafe; color: #1e40af; }
-        .task-weekly { background: #d1fae5; color: #065f46; }
+        
+        /* Red: 進廠, B保 */
+        .task-entry { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+        /* Blue: 連主檢, S保 (視覺藍色，但邏輯是進廠) */
+        .task-main { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        /* Green: 週保養, A保 (視覺綠色，但邏輯是進廠) */
+        .task-weekly { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     </style>
 </head>
 <body>
@@ -184,7 +180,7 @@
             });
         }
 
-        // 優化日期計算
+        // Utils
         function getWorkDay(y, m, n) {
             let d = new Date(y, m-1, 1), c = 0;
             while (d.getMonth() === m-1) {
@@ -226,8 +222,10 @@
 
         function buildSchedule() {
             let rawEvents = [];
-            const y = currentYear + 1911;
+            const y = currentYear + 1911; 
             
+            // --- 1. 標準例行性檢查 (Standard Routine) ---
+            // 這些是「標準」的週保養與連主檢，包含輪車的例行檢查
             for (let m = 1; m <= 12; m++) {
                 const s = SCHEDULE[m];
                 if (!s) continue; 
@@ -248,7 +246,6 @@
                     rawEvents.push({ m, d: fmt(d), t, sys, cat: sysData.cat, ids, bulk: sysData.bulk });
                 };
 
-                // Schedule Rules
                 const eg = m % 3 || 3;
                 add(wd1, '進廠', 'T74', (_, i) => DATA.T74.groups[i] === eg);
                 add(mainWed, '連主官裝備檢查', 'T74', (_, i) => DATA.T74.groups[i] !== eg);
@@ -258,6 +255,8 @@
                 const w1f = getWeekday(y, m, 1, 5);
                 if (w1f && fmt(w1f).key !== mainFriKey) add(w1f, `${m}月第1週週保養`, 'T65K2');
                 ['T85','M1911A1','M1911'].forEach(s => add(mainWed, '連主官裝備檢查', s));
+                
+                // 輪車的「例行性」檢查 (保留，不影響B/S/A)
                 ['TRUCK', 'COMPASS', 'TS71', 'KY-2000A'].forEach(s => add(mainTue, '連主官裝備檢查', s));
                 ['MHR-112','PRC-37C'].forEach(s => { add(wd1, '進廠', s); add(mainTue, '連主官裝備檢查', s); });
                 ['M8A1','LS-920'].forEach(s => { add(wd2, '進廠', s); add(mainMon, '連主官裝備檢查', s); });
@@ -265,10 +264,50 @@
                 getFridays(y, m).forEach(f => {
                     if (fmt(f).key === mainFriKey) return;
                     const w = Math.ceil(f.getDate() / 7);
+                    // 輪車的「例行性」週保養 (保留)
                     ['M8A1','LS-920','MHR-112','PRC-37C','KY-2000A','TRUCK'].forEach(s => add(f, `${m}月第${w}週週保養`, s));
                 });
             }
+
+            // --- 2. 3.5噸載重車 獨立進廠排程 (Truck Entry Logic) ---
+            // 規則：基準日 2025/08/25 (B保)，每6個月循環 B -> S -> A -> S
+            // 這些全部都是「進廠」日期，不屬於週保養或連主檢
             
+            let truckDate = new Date(2025, 7, 25); // 2025/08/25
+            let cycleIdx = 0; // 0=B, 1=S, 2=A, 3=S
+            const cyclePattern = ['B級保養', 'S級保養', 'A級保養', 'S級保養'];
+
+            // 運算範圍：往後推算最多20年
+            for(let i=0; i<40; i++) {
+                if (truckDate.getFullYear() > y) break; 
+
+                let actualDate = new Date(truckDate);
+                // 遇週六(6)或週日(0)順延至下週一
+                while(actualDate.getDay() === 0 || actualDate.getDay() === 6) {
+                    actualDate.setDate(actualDate.getDate() + 1);
+                }
+
+                if (actualDate.getFullYear() === y) {
+                    const taskName = `輪車進廠 (${cyclePattern[cycleIdx % 4]})`; // 例如: "輪車進廠 (B級保養)"
+                    const sysData = DATA['TRUCK'];
+                    if (sysData) {
+                        rawEvents.push({
+                            m: actualDate.getMonth() + 1,
+                            d: fmt(actualDate),
+                            t: taskName, 
+                            sys: 'TRUCK',
+                            cat: '輪車',
+                            ids: sysData.list || [],
+                            bulk: 0
+                        });
+                    }
+                }
+
+                truckDate.setMonth(truckDate.getMonth() + 6);
+                cycleIdx++;
+            }
+            
+            // --- GROUPING & SORTING ---
             const groupedMap = new Map();
             rawEvents.forEach(e => {
                 const k = `${e.d.key}_${e.t}`;
@@ -298,7 +337,22 @@
             
             filteredData = allData.filter(row => {
                 if (mf !== 'all' && row.m != mf) return false;
-                if (tf !== 'all' && (tf === '週保養' ? !row.t.includes('週保養') : row.t !== tf)) return false;
+                
+                // 修正後的過濾邏輯
+                if (tf !== 'all') {
+                    if (tf === '進廠') {
+                        // 包含: 標準"進廠" OR 包含"輪車進廠" (B/S/A 全部算進廠)
+                        if (row.t !== '進廠' && !row.t.includes('輪車進廠')) return false;
+                    } else if (tf === '連主官裝備檢查') {
+                        // 嚴格過濾，不包含輪車的 B/S/A
+                        if (row.t !== '連主官裝備檢查') return false;
+                    } else if (tf === '週保養') {
+                        // 嚴格過濾，不包含輪車的 B/S/A
+                        if (!row.t.includes('週保養')) return false;
+                    } else {
+                        if (row.t !== tf) return false;
+                    }
+                }
                 
                 const hasMatchingItem = row.items.some(it => {
                     if (cf !== 'all' && it.cat !== cf) return false;
@@ -325,7 +379,24 @@
             const fragment = document.createDocumentFragment();
 
             filteredData.forEach((row, i) => {
-                const taskTypeClass = row.t === '進廠' ? 'task-entry' : row.t.includes('連主官') ? 'task-main' : 'task-weekly';
+                // 視覺樣式邏輯 (Visual Styles Only)
+                // 雖然邏輯上都是進廠，但依據字串給予不同顏色
+                
+                let taskTypeClass = 'task-weekly'; 
+                
+                if (row.t.includes('B級')) {
+                    taskTypeClass = 'task-entry'; // Red (B保)
+                } else if (row.t.includes('S級')) {
+                    taskTypeClass = 'task-main'; // Blue (S保)
+                } else if (row.t.includes('A級')) {
+                    taskTypeClass = 'task-weekly'; // Green (A保)
+                } else if (row.t === '進廠') {
+                    taskTypeClass = 'task-entry'; // Red (一般進廠)
+                } else if (row.t === '連主官裝備檢查') {
+                    taskTypeClass = 'task-main'; // Blue
+                } else {
+                    taskTypeClass = 'task-weekly'; // Green
+                }
                 
                 const catsArray = Array.from(row.cats);
                 const catSummaryStr = catsArray.map(c => c[0]).join('');
@@ -367,9 +438,7 @@
                         <div id="row-${rowId}" class="sys-card ${catTheme.css} ${shouldExpand ? 'expanded' : ''} cursor-pointer relative" onclick="toggleSys('${rowId}')">
                             <div class="flex justify-between items-center p-2.5">
                                 <div class="flex items-center gap-3">
-                                    <!-- 裝備名稱 -->
                                     <span class="font-bold text-sm text-slate-700">${DATA[it.sys].name}</span>
-                                    <!-- 類別標籤 (使用 CSS 變數上色) -->
                                     <span class="sys-tag">${it.cat} ${cnt}件</span>
                                 </div>
                                 <div class="text-slate-400 chevron" id="icon-${rowId}">
@@ -496,7 +565,7 @@
         msel.innerHTML = '<option value="all">月份: 全部</option>';
         for (let i = 1; i <= 12; i++) msel.innerHTML += `<option value="${i}">${i}月</option>`;
 
-        document.getElementById('typeFilter').innerHTML = '<option value="all">任務: 全部</option><option value="進廠">🔴 進廠</option><option value="連主官裝備檢查">🔵 連主檢</option><option value="週保養">🟢 週保養</option>';
+        document.getElementById('typeFilter').innerHTML = '<option value="all">任務: 全部</option><option value="進廠">🔴 進廠 (含輪車BAS級)</option><option value="連主官裝備檢查">🔵 連主檢</option><option value="週保養">🟢 週保養</option>';
 
         ysel.onchange = (e) => { currentYear = +e.target.value; buildSchedule(); filter(); };
         
