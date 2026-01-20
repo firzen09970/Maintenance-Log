@@ -65,9 +65,9 @@
                 <span class="text-white font-bold mr-2 text-lg">裝備管制</span>
                 <select id="yearInput" class="bg-slate-700 text-white font-bold text-sm px-2 py-1.5 rounded-lg border border-slate-600 outline-none focus:border-emerald-500"></select>
             </div>
+            <!-- Export Button Removed -->
             <div class="flex gap-2">
                 <button onclick="openSettings()" class="bg-slate-600 text-white px-3 py-1.5 rounded-lg text-sm transition-colors hover:bg-slate-500">⚙️</button>
-                <button onclick="exportToCSV()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-emerald-500 shadow-lg shadow-emerald-900/20">匯出</button>
             </div>
         </div>
         
@@ -532,22 +532,6 @@
                 t.classList.add('show');
                 setTimeout(() => t.classList.remove('show'), 2000);
             });
-        }
-
-        window.exportToCSV = function() {
-            let csv = '\uFEFFYear,Month,Date,Day,Task,Category,System,Count,IDs\n';
-            allData.forEach(row => {
-                row.items.forEach(it => {
-                    const ids = it.bulk ? `批量${it.bulk}件` : it.ids.join(';');
-                    csv += `${currentYear},${row.m},${row.d.str},${row.d.day},${row.t},${it.cat},${DATA[it.sys].name},${it.bulk||it.ids.length},"${ids}"\n`;
-                });
-            });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `裝備管制清冊_${currentYear}年.csv`;
-            a.click();
         }
 
         // --- INIT ---
