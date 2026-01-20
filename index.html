@@ -2,786 +2,516 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>115年 裝備管制 (簡潔複製版)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>115年 裝備管制 (Lite)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/js/all.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Roboto+Mono:wght@500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background: #f3f4f6; padding-bottom: 40px; }
         
-        body { 
-            font-family: 'Noto Sans TC', sans-serif; 
-            -webkit-tap-highlight-color: transparent; 
-            background-color: #f3f4f6; 
-            padding-bottom: 40px; 
+        /* Category Colors - Specific for Border Left & Text */
+        /* 兵器 - 紅 */
+        .theme-weap { --main-col: #ef4444; --bg-col: #fef2f2; --text-col: #991b1b; } 
+        /* 通信 - 藍 */
+        .theme-comm { --main-col: #0ea5e9; --bg-col: #e0f2fe; --text-col: #075985; }
+        /* 化學 - 青 */
+        .theme-chem { --main-col: #14b8a6; --bg-col: #ccfbf1; --text-col: #115e59; }
+        /* 輪車 - 灰 */
+        .theme-truck { --main-col: #64748b; --bg-col: #f1f5f9; --text-col: #334155; }
+        /* 工兵 - 橘 */
+        .theme-eng { --main-col: #f59e0b; --bg-col: #fef3c7; --text-col: #92400e; }
+
+        /* Card Styles */
+        .card-base { position: relative; overflow: hidden; transition: transform 0.1s; }
+        .card-base:active { transform: scale(0.99); }
+
+        /* Equipment System Card (Small Card) */
+        .sys-card { 
+            border-radius: 6px; 
+            margin-bottom: 8px; 
+            transition: all 0.2s; 
+            background-color: white;
+            border: 1px solid #e5e7eb; 
+            border-left-width: 5px; /* Thicker left border for category color */
+            border-left-color: var(--main-col); /* Use CSS variable */
         }
-        .font-mono { font-family: 'Roboto Mono', monospace; }
+        .sys-card:hover { transform: translateX(2px); box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
 
-        /* Card Left Borders */
-        .card-entry { border-left: 5px solid #ef4444; } 
-        .card-main { border-left: 5px solid #2563eb; } 
-        .card-weekly { border-left: 5px solid #10b981; } 
-
-        /* Badges */
-        .badge-entry { background: #fee2e2; color: #b91c1c; }
-        .badge-main { background: #dbeafe; color: #1e40af; }
-        .badge-weekly { background: #d1fae5; color: #065f46; }
-        .badge-stat { background: #f3f4f6; color: #4b5563; border: 1px solid #d1d5db; font-size: 0.75rem; }
-
-        /* System Backgrounds */
-        .bg-sys-t74 { background: #eff6ff; color: #1e40af; border-left: 3px solid #60a5fa; } 
-        .bg-sys-t75 { background: #ecfdf5; color: #047857; border-left: 3px solid #34d399; } 
-        .bg-sys-t65k2 { background: #f5f3ff; color: #5b21b6; border-left: 3px solid #a78bfa; } 
-        .bg-sys-t85 { background: #f0fdf4; color: #166534; border-left: 3px solid #22c55e; } 
-        .bg-sys-m1911 { background: #fef2f2; color: #991b1b; border-left: 3px solid #f87171; } 
-        .bg-sys-chem { background: #f0fdfa; color: #134e4a; border-left: 3px solid #2dd4bf; } 
-        .bg-sys-comm { background: #f0f9ff; color: #0369a1; border-left: 3px solid #0ea5e9; } 
-        .bg-sys-truck { background: #f8fafc; color: #334155; border-left: 3px solid #64748b; } 
-        .bg-sys-eng { background: #fffbeb; color: #92400e; border-left: 3px solid #f59e0b; }
-
-        .touch-select { height: 44px; font-size: 15px; padding-right: 30px; }
-        
-        #sticky-header {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 50;
-            background-color: #1e293b; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        /* Tag Style inside Sys Card */
+        .sys-tag {
+            background-color: var(--bg-col);
+            color: var(--text-col);
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            font-weight: bold;
         }
 
-        #toast {
-            visibility: hidden;
-            min-width: 250px;
-            margin-left: -125px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 8px;
-            padding: 16px;
-            position: fixed;
-            z-index: 100;
-            left: 50%;
-            bottom: 30px;
-            font-size: 16px;
-            opacity: 0;
-            transition: opacity 0.3s, bottom 0.3s;
-        }
-        #toast.show {
-            visibility: visible;
-            opacity: 1;
-            bottom: 50px;
-        }
+        /* Utility */
+        .chevron { transition: transform 0.2s; }
+        .expanded .chevron { transform: rotate(180deg); }
+        #toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 10px 20px; border-radius: 50px; opacity: 0; transition: opacity 0.3s, bottom 0.3s; pointer-events: none; z-index: 100; box-shadow: 0 4px 6px rgba(0,0,0,0.2); font-size: 14px; display: flex; align-items: center; gap: 8px; font-weight: 500;}
+        #toast.show { opacity: 1; bottom: 50px; }
+        .modal-bg { background-color: rgba(0,0,0,0.5); backdrop-filter: blur(2px); }
+
+        /* Badge for task type */
+        .badge-task { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        .task-entry { background: #fee2e2; color: #b91c1c; }
+        .task-main { background: #dbeafe; color: #1e40af; }
+        .task-weekly { background: #d1fae5; color: #065f46; }
     </style>
 </head>
 <body>
-
-    <!-- Unified Sticky Header -->
-    <div id="sticky-header">
-        <div class="flex justify-between items-center p-3 border-b border-slate-700/50">
-            <div class="flex items-center gap-2">
-                <div class="bg-slate-700 rounded-lg px-3 py-1.5 flex items-center relative border border-slate-600">
-                    <span class="text-xs text-slate-400 mr-2">民國</span>
-                    <select id="yearInput" class="bg-transparent text-white font-bold text-lg outline-none appearance-none pr-5 z-10 cursor-pointer w-16 text-center">
-                        <!-- JS populates -->
-                    </select>
-                    <i class="fa-solid fa-caret-down absolute right-2 text-slate-400 text-xs pointer-events-none"></i>
-                    <span class="text-xs text-slate-400 ml-1">年</span>
-                </div>
+    <!-- Top Bar -->
+    <div class="fixed top-0 left-0 right-0 z-40 bg-slate-800 shadow-xl">
+        <div class="flex justify-between items-center p-3 border-b border-slate-700">
+            <div class="flex gap-2 items-center">
+                <span class="text-white font-bold mr-2 text-lg">裝備管制</span>
+                <select id="yearInput" class="bg-slate-700 text-white font-bold text-sm px-2 py-1.5 rounded-lg border border-slate-600 outline-none focus:border-emerald-500"></select>
             </div>
-            <button onclick="exportToCSV()" class="bg-emerald-600 active:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium shadow flex items-center gap-2 transition-colors">
-                <i class="fa-solid fa-file-export"></i> 匯出
-            </button>
+            <div class="flex gap-2">
+                <button onclick="openSettings()" class="bg-slate-600 text-white px-3 py-1.5 rounded-lg text-sm transition-colors hover:bg-slate-500">⚙️</button>
+                <button onclick="exportToCSV()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors hover:bg-emerald-500 shadow-lg shadow-emerald-900/20">匯出</button>
+            </div>
         </div>
         
+        <!-- Filters -->
         <div class="grid grid-cols-3 gap-2 p-3 pb-2">
-            <div class="relative">
-                <select id="monthFilter" class="w-full bg-slate-700 text-white rounded-lg border border-slate-600 outline-none touch-select appearance-none pl-3">
-                    <option value="all">月份: 全部</option>
-                    <option value="1">1月</option>
-                    <option value="2">2月</option>
-                    <option value="3">3月</option>
-                    <option value="4">4月</option>
-                    <option value="5">5月</option>
-                    <option value="6">6月</option>
-                    <option value="7">7月</option>
-                    <option value="8">8月</option>
-                    <option value="9">9月</option>
-                    <option value="10">10月</option>
-                    <option value="11">11月</option>
-                    <option value="12">12月</option>
-                </select>
-                <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
-            </div>
-            
-            <div class="relative">
-                <select id="sysFilter" class="w-full bg-slate-700 text-white rounded-lg border border-slate-600 outline-none touch-select appearance-none pl-3">
-                    <option value="all">裝備: 全部</option>
-                    <option value="T74">T74 排機</option>
-                    <option value="T75">T75 班機</option>
-                    <option value="T65K2">T65K2</option>
-                    <option value="T85">T85 榴彈</option>
-                    <option value="M1911">M1911/A1</option>
-                    <option value="M8A1">M8A1</option>
-                    <option value="LS-920">LS-920</option>
-                    <option value="T3-75">T3-75</option>
-                    <option value="M256">M256</option>
-                    <option value="WAR_FILTER">戰備濾毒罐</option>
-                    <option value="62_FILTER">62式濾毒罐</option>
-                    <option value="T4-86">T4-86</option>
-                    <option value="MHR-112">MHR-112</option>
-                    <option value="PRC-37C">PRC-37C</option>
-                    <option value="KY-2000A">KY-2000A</option>
-                    <option value="TRUCK">3.5T載重車</option>
-                    <option value="COMPASS">指北針</option>
-                </select>
-                <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
-            </div>
-
-            <div class="relative">
-                <select id="typeFilter" class="w-full bg-slate-700 text-white rounded-lg border border-slate-600 outline-none touch-select appearance-none pl-3">
-                    <option value="all">任務: 全部</option>
-                    <option value="進廠">🔴 進廠</option>
-                    <option value="連主官裝備檢查">🔵 連主檢</option>
-                    <option value="週保養">🟢 週保養</option>
-                </select>
-                <i class="fa-solid fa-chevron-down absolute right-3 top-3.5 text-slate-400 text-xs pointer-events-none"></i>
-            </div>
+            <select id="monthFilter" class="bg-slate-700 text-white rounded-lg border border-slate-600 px-3 py-2 outline-none text-sm"></select>
+            <select id="catFilter" class="bg-slate-700 text-white rounded-lg border border-slate-600 px-3 py-2 outline-none text-sm">
+                <option value="all">類別: 全部</option>
+                <option value="兵器">⚔️ 兵器</option>
+                <option value="通信">📡 通信</option>
+                <option value="化學">🧪 化學</option>
+                <option value="輪車">🚚 輪車</option>
+                <option value="工兵">🧭 工兵</option>
+            </select>
+            <select id="typeFilter" class="bg-slate-700 text-white rounded-lg border border-slate-600 px-3 py-2 outline-none text-sm"></select>
         </div>
+        <div class="px-3 pb-3">
+            <input type="text" id="searchInput" placeholder="搜尋序號 (例如: 9971)..." class="w-full px-4 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg outline-none focus:border-emerald-500 transition-colors placeholder-slate-400">
+        </div>
+    </div>
 
-        <div class="px-3 pb-3 bg-slate-800">
-            <div class="relative">
-                <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
-                <input type="text" id="searchInput" placeholder="輸入機號搜尋..." 
-                       class="w-full pl-10 pr-4 py-2 bg-slate-700 text-white border border-slate-600 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none placeholder-slate-400">
+    <!-- Main Content Area -->
+    <div class="pt-[210px] max-w-2xl mx-auto p-3">
+        <!-- List View -->
+        <div id="cardContainer" class="space-y-4"></div>
+        <div id="noData" class="hidden flex flex-col items-center justify-center mt-12 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mb-2 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <div class="text-lg">沒有符合條件的資料</div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="hidden fixed inset-0 z-50 modal-bg flex items-center justify-center p-4">
+        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800">⚙️ 編輯資料庫</h3>
+                <button onclick="closeSettings()" class="text-gray-400 hover:text-slate-800 text-2xl leading-none">&times;</button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1 space-y-4">
+                <div class="text-xs text-amber-800 bg-amber-50 p-3 rounded-lg border border-amber-200 leading-relaxed">
+                    ⚠️ <b>注意：</b> 修改內容會自動儲存於此裝置。請保持 JSON 格式正確。<br>若發生錯誤，請按左下角「恢復預設值」。
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1 text-slate-500 uppercase tracking-wider">裝備清單 (DATA)</label>
+                    <textarea id="jsonEditorData" class="w-full h-48 p-3 text-xs font-mono border rounded-lg bg-slate-50 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold mb-1 text-slate-500 uppercase tracking-wider">年度日程表 (SCHEDULE)</label>
+                    <textarea id="jsonEditorSchedule" class="w-full h-32 p-3 text-xs font-mono border rounded-lg bg-slate-50 text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
+                </div>
+            </div>
+            <div class="p-4 border-t bg-slate-50 flex justify-between items-center">
+                <button onclick="resetToDefaults()" class="text-red-500 text-xs font-bold hover:bg-red-50 px-3 py-2 rounded transition-colors">↺ 恢復預設</button>
+                <button onclick="saveSettings()" class="bg-slate-800 text-white px-6 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-700 shadow-md transition-transform active:scale-95">儲存並應用</button>
             </div>
         </div>
     </div>
 
-    <!-- Main Content -->
-    <div id="cardContainer" class="pt-[220px] p-3 space-y-4 max-w-2xl mx-auto"></div>
-    
-    <div id="noData" class="hidden pt-[240px] text-center text-gray-400">
-        <div class="flex flex-col items-center">
-            <i class="fa-solid fa-clipboard-list text-6xl mb-4 text-gray-300"></i>
-            <p class="text-lg font-medium">沒有符合條件的資料</p>
-        </div>
+    <div id="toast">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+        <span>已複製到剪貼簿</span>
     </div>
-
-    <!-- Toast -->
-    <div id="toast"><i class="fa-solid fa-check-circle text-green-400 mr-2"></i> 已複製到剪貼簿</div>
 
     <script>
-        const naturalSort = (a, b) => a.localeCompare(b, undefined, {numeric: true, sensitivity: 'base'});
-        // Global map to store fixed indices
-        const machineIndexMap = new Map();
+        // --- CONFIG & CONSTANTS ---
+        const CATEGORIES = {
+            '兵器': { color: '#ef4444', css: 'theme-weap' }, // Red
+            '通信': { color: '#0ea5e9', css: 'theme-comm' }, // Blue
+            '化學': { color: '#14b8a6', css: 'theme-chem' }, // Teal
+            '輪車': { color: '#64748b', css: 'theme-truck' }, // Slate
+            '工兵': { color: '#f59e0b', css: 'theme-eng' }   // Amber
+        };
 
-        function registerMachines(rawStr, startIdx = 1, parseWithIndex = false) {
-            if (!rawStr) return [];
-            let list = [];
-            const items = rawStr.replace(/\n/g, ',').split(',');
-            let currentAutoIndex = startIdx;
+        const DEFAULT_DATA = {
+            T74: { name: 'T74 排用機槍', cat: '兵器', ids: '007231,007447,007496,007501,007544,007654,009661,009971', groups: [1,1,2,2,2,3,3,3] },
+            T75: { name: 'T75 班用機槍', cat: '兵器', ids: '008727,008749,008788,008805,008870,008899,008950,009043,009097,009109,012244,012247,012459,012610,012627,012864,012865,012880,012919,012925,012928,012931,012933,012943,012946,012954,012959,012962,012964,012967,013026,013029,013031,013032,013038,013039', groups: Array(36).fill(0).map((_, i) => i < 18 ? 'A' : 'B') },
+            T65K2: { name: 'T65K2 步槍', cat: '兵器', ids: '186074,187921,193648,207145,209263,209439,209697,209823,219834,220007,221303,221554,221566,221640,224376,230470,231016,231849,232622,234718,234742,236236,236465,236967,237338,314846,332587,332607,332668,332754,332762,337624,362245,362411,362415,362676,363053,364122,364896,367128,367730,368657,369550,370013,370200,370374,383020,383715,385207,385332,386038,386251,386399,388131,389145,389516,390010,390539,391124,391958,392012,392166,392167,393872,393947,394347,394468,394681,394777,394861,394863,394902,394907,394913,394923,395042,395065,395109,395113,395167,395348,395555,395671,395860,396172,396176,396207,396356,396359,396597,397068,397153,397273,397314,398005,398192,398389,398432,398934,399146,399327,399595,400655,400847,401766,402894,403128,403843,404390,405120,405205,405700,406970,407492,407620,408250' },
+            T85: { name: 'T85 榴彈發射器', cat: '兵器', ids: '000032,000155,001750,001780,001998,008454,008834,008890,009004,009759,010532,010681,011186,011293,011358,011498,011522,011662,011820,011906,012571,012589,012695,012760,012775,012845,014580,016641,018164,018390,019120,019191,019202,019261,019674,021606' },
+            M1911A1: { name: 'M1911A1 手槍', cat: '兵器', ids: '51-06411' },
+            M1911: { name: 'M1911 手槍', cat: '兵器', ids: '124141,1546783,1810911,1943969,1952496,2215347,2226406,954710' },
+            M8A1: { name: 'M8A1 毒氣警報器', cat: '化學', ids: '1010413' },
+            'LS-920': { name: 'LS-920 消毒器', cat: '化學', ids: '513,514' },
+            'T3-75': { name: 'T3-75 防毒面具', cat: '化學', bulk: 161 },
+            M256: { name: 'M256 偵檢包', cat: '化學', bulk: 1 },
+            WAR_FILTER: { name: '戰備濾毒罐', cat: '化學', bulk: 161 },
+            '62_FILTER': { name: '62式濾毒罐', cat: '化學', bulk: 161 },
+            'T4-86': { name: 'T4-86 消除包', cat: '化學', bulk: 161 },
+            'MHR-112': { name: 'MHR-112 無線電機', cat: '通信', ids: 'LV11203353,LV11203354,LV11203355,LV11203356,LV11203357,LV11203358,LV11203359,LV11203360,LV11203361,LV11203362,LV11203363,LV11203364,LV11203365,LV11203366,LV11203367,LV11203368,LV11203369,LV11203370,LV11203371,LV11203372,LV11203373' },
+            'PRC-37C': { name: 'CS/PRC-37C 無線電機', cat: '通信', ids: '22250' },
+            'KY-2000A': { name: 'KY-2000A 電子話機', cat: '通信', ids: '714-T02378,714-T02422,714-T02628,714-T02647,714-T03864,714-T13385,714-T13867,714-T13873,714-T14184,714-T14238,714-T15582,714-T15596,714-T14095,714-T17758,714-T17764' },
+            TRUCK: { name: '3.5噸載重車', cat: '輪車', ids: '軍3-23993' },
+            COMPASS: { name: '指北針', cat: '工兵', ids: 'V-109J-0D07-0374,900288,9105443,9100940' },
+            TS71: { name: 'TS-71 八倍望遠鏡', cat: '工兵', ids: '920593,920594,930926,931142,931501,931863,94A031182,94A030419,94A030713' }
+        };
 
-            items.forEach((item) => {
-                let s = item.trim();
-                if (!s) return;
-                
-                let id = s;
-                let index = currentAutoIndex;
+        const DEFAULT_SCHEDULE = {1:{m:19,t:20,w:21,f:23},2:{m:23,t:24,w:25,f:27},3:{m:23,t:24,w:25,f:27},4:{m:20,t:21,w:22,f:24},5:{m:25,t:26,w:27,f:29},6:{m:22,t:23,w:24,f:26},7:{m:20,t:21,w:22,f:24},8:{m:24,t:25,w:26,f:28},9:{m:21,t:22,w:23,f:25},10:{m:19,t:20,w:21,f:23},11:{m:23,t:24,w:25,f:27},12:{m:21,t:22,w:23,f:25}};
 
-                if (parseWithIndex) {
-                    const parts = s.split(/\s+/);
-                    if (parts.length > 1) {
-                        id = parts[parts.length - 1];
-                        index = parts[0].replace('.', '');
-                    }
-                }
-                
-                machineIndexMap.set(id, index);
-                list.push(id);
-                if (!parseWithIndex) currentAutoIndex++;
+        let DATA = {}, SCHEDULE = {};
+        let allData = [], filteredData = [], currentYear = 115;
+
+        // --- CORE FUNCTIONS ---
+        function loadData() {
+            const savedData = localStorage.getItem('MY_EQUIP_DATA');
+            const savedSched = localStorage.getItem('MY_SCHEDULE');
+            DATA = savedData ? JSON.parse(savedData) : JSON.parse(JSON.stringify(DEFAULT_DATA));
+            SCHEDULE = savedSched ? JSON.parse(savedSched) : JSON.parse(JSON.stringify(DEFAULT_SCHEDULE));
+
+            Object.keys(DATA).forEach(k => {
+                if (DATA[k].ids && !DATA[k].list) DATA[k].list = DATA[k].ids.split(',');
             });
-            
-            if (!parseWithIndex) {
-                list.sort(naturalSort);
-                list.forEach((id, i) => {
-                    machineIndexMap.set(id, startIdx + i);
-                });
-            } else {
-                list.sort(naturalSort); 
-            }
-            return list;
         }
 
-        // --- DATA ---
-        const t74_raw = `1 007231, 2 007447, 3 007496, 4 007501, 5 007544, 6 007654, 7 009661, 8 009971`;
-        const t74_ids = registerMachines(t74_raw, 1, true);
-        const t74_machines = t74_ids.map(id => {
-            const idx = parseInt(machineIndexMap.get(id));
-            let grp = 3;
-            if (idx <= 2) grp = 1;
-            else if (idx <= 5) grp = 2;
-            return { id: id, group: grp };
-        });
-
-        const t75_raw = `1 008727, 2 008749, 3 008788, 4 008805, 5 008870, 6 008899, 7 008950, 8 009043, 9 009097, 10 009109, 11 012244, 12 012247, 13 012459, 14 012610, 15 012627, 16 012864, 17 012865, 18 012880, 19 012919, 20 012925, 21 012928, 22 012931, 23 012933, 24 012943, 25 012946, 26 012954, 27 012959, 28 012962, 29 012964, 30 012967, 31 013026, 32 013029, 33 013031, 34 013032, 35 013038, 36 013039`;
-        const t75_ids = registerMachines(t75_raw, 1, true);
-        const t75_data = t75_ids.map(id => {
-            const idx = parseInt(machineIndexMap.get(id));
-            return { id: id, group: idx <= 18 ? 'A' : 'B' };
-        });
-
-        const t65k2_raw = `1 186074, 2 187921, 3 193648, 4 207145, 5 209263, 6 209439, 7 209697, 8 209823, 9 219834, 10 220007, 11 221303, 12 221554, 13 221566, 14 221640, 15 224376, 16 230470, 17 231016, 18 231849, 19 232622, 20 234718, 21 234742, 22 236236, 23 236465, 24 236967, 25 237338, 26 314846, 27 332587, 28 332607, 29 332668, 30 332754, 31 332762, 32 337624, 33 362245, 34 362411, 35 362415, 36 362676, 37 363053, 38 364122, 39 364896, 40 367128, 41 367730, 42 368657, 43 369550, 44 370013, 45 370200, 46 370374, 47 383020, 48 383715, 49 385207, 50 385332, 51 386038, 52 386251, 53 386399, 54 388131, 55 389145, 56 389516, 57 390010, 58 390539, 59 391124, 60 391958, 61 392012, 62 392166, 63 392167, 64 393872, 65 393947, 66 394347, 67 394468, 68 394681, 69 394777, 70 394861, 71 394863, 72 394902, 73 394907, 74 394913, 75 394923, 76 395042, 77 395065, 78 395109, 79 395113, 80 395167, 81 395348, 82 395555, 83 395671, 84 395860, 85 396172, 86 396176, 87 396207, 88 396356, 89 396359, 90 396597, 91 397068, 92 397153, 93 397273, 94 397314, 95 398005, 96 398192, 97 398389, 98 398432, 99 398934, 100 399146, 101 399327, 102 399595, 103 400655, 104 400847, 105 401766, 106 402894, 107 403128, 108 403843, 109 404390, 110 405120, 111 405205, 112 405700, 113 406970, 114 407492, 115 407620, 116 408250`;
-        const t65k2_ids = registerMachines(t65k2_raw, 1, true);
-
-        const t85_raw = `000032, 000155, 001750, 001780, 001998, 008454, 008834, 008890, 009004, 009759, 010532, 010681, 011186, 011293, 011358, 011498, 011522, 011662, 011820, 011906, 012571, 012589, 012695, 012760, 012775, 012845, 014580, 016641, 018164, 018390, 019120, 019191, 019202, 019261, 019674, 021606`;
-        const t85_ids = registerMachines(t85_raw, 1, false);
-
-        const m1911a1_ids = registerMachines("51-06411", 1, false);
-        const m1911_ids = registerMachines(`124141, 1546783, 1810911, 1943969, 1952496, 2215347, 2226406, 954710`, 1, false);
-        const m8a1_ids = registerMachines("1010413", 1, false);
-        const ls920_ids = registerMachines("513, 514", 1, false);
-        const mhr112_ids = registerMachines(`LV11203353, LV11203354, LV11203355, LV11203356, LV11203357, LV11203358, LV11203359, LV11203360, LV11203361, LV11203362, LV11203363, LV11203364, LV11203365, LV11203366, LV11203367, LV11203368, LV11203369, LV11203370, LV11203371, LV11203372, LV11203373`, 1, false);
-        const prc37c_ids = registerMachines("22250", 1, false);
-        const ky2000_ids = registerMachines(`714-T02378, 714-T02422, 714-T02628, 714-T02647, 714-T03864, 714-T13385, 714-T13867, 714-T13873, 714-T14184, 714-T14238, 714-T15582, 714-T15596, 714-T14095, 714-T17758, 714-T17764`, 1, false);
-        const truck_ids = registerMachines("軍3-23993", 1, false);
-        const compass_ids = registerMachines(`V-109J-0D07-0374, 900288, 9105443, 9100940`, 1, false);
-
-        // Bulk Items
-        const t375_ids = Array(161).fill("量產型");
-        const m256_ids = Array(1).fill("偵檢包");
-        const filter_war_ids = Array(161).fill("戰備罐");
-        const filter_62_ids = Array(161).fill("62式");
-        const t486_ids = Array(161).fill("消除包");
-
-        const sysCategories = {
-            'T74': '兵器', 'T75': '兵器', 'T65K2': '兵器', 'T85': '兵器',
-            'M1911A1': '兵器', 'M1911': '兵器',
-            'M8A1': '化學', 'LS-920': '化學',
-            'T3-75': '化學', 'M256': '化學', 'WAR_FILTER': '化學', '62_FILTER': '化學', 'T4-86': '化學',
-            'MHR-112': '通信', 'PRC-37C': '通信', 'KY-2000A': '通信',
-            'TRUCK': '車輛', 'COMPASS': '工兵'
-        };
-
-        const sysNames = {
-            'T74': 'T74 排用機槍', 'T75': 'T75 班用機槍', 'T65K2': 'T65K2 步槍', 'T85': 'T85 榴彈發射器',
-            'M1911A1': 'M1911A1 手槍', 'M1911': 'M1911 手槍',
-            'M8A1': 'M8A1 毒氣警報器', 'LS-920': 'LS-920 消毒器',
-            'T3-75': 'T3-75 防毒面具', 'M256': 'M256 偵檢包', 'WAR_FILTER': '戰備濾毒罐', '62_FILTER': '62式濾毒罐', 'T4-86': 'T4-86 消除包',
-            'MHR-112': 'MHR-112 無線電機', 'PRC-37C': 'CS/PRC-37C 無線電機', 'KY-2000A': 'KY-2000A 電子話機',
-            'TRUCK': '3.5噸載重車', 'COMPASS': '指北針'
-        };
-
-        const sysClasses = {
-            'T74': 'bg-sys-t74', 'T75': 'bg-sys-t75', 'T65K2': 'bg-sys-t65k2', 'T85': 'bg-sys-t85',
-            'M1911A1': 'bg-sys-m1911', 'M1911': 'bg-sys-m1911',
-            'M8A1': 'bg-sys-chem', 'LS-920': 'bg-sys-chem',
-            'T3-75': 'bg-sys-chem', 'M256': 'bg-sys-chem', 'WAR_FILTER': 'bg-sys-chem', '62_FILTER': 'bg-sys-chem', 'T4-86': 'bg-sys-chem',
-            'MHR-112': 'bg-sys-comm', 'PRC-37C': 'bg-sys-comm', 'KY-2000A': 'bg-sys-comm',
-            'TRUCK': 'bg-sys-truck', 'COMPASS': 'bg-sys-eng'
-        };
-
-        let mergedData = [];
-        let currentYearROC = 115; 
-
-        // OFFICIAL 115 SCHEDULE
-        const mainInspDates115 = {
-            1: { mon: 19, tue: 20, wed: 21, fri: 23 },
-            2: { mon: 23, tue: 24, wed: 25, fri: 27 },
-            3: { mon: 23, tue: 24, wed: 25, fri: 27 },
-            4: { mon: 20, tue: 21, wed: 22, fri: 24 },
-            5: { mon: 25, tue: 26, wed: 27, fri: 29 },
-            6: { mon: 22, tue: 23, wed: 24, fri: 26 },
-            7: { mon: 20, tue: 21, wed: 22, fri: 24 },
-            8: { mon: 24, tue: 25, wed: 26, fri: 28 },
-            9: { mon: 21, tue: 22, wed: 23, fri: 25 },
-            10: { mon: 19, tue: 20, wed: 21, fri: 23 },
-            11: { mon: 23, tue: 24, wed: 25, fri: 27 },
-            12: { mon: 21, tue: 22, wed: 23, fri: 25 }
-        };
-
-        function isFixedHoliday(date) {
-            const m = date.getMonth() + 1;
-            const d = date.getDate();
-            if (m === 1 && d === 1) return true;  
-            if (m === 2 && d === 28) return true; 
-            if (m === 10 && d === 10) return true;
-            return false;
-        }
-
-        function isHolidayOrWeekend(date) {
-            const day = date.getDay();
-            if (day === 0 || day === 6) return true;
-            return isFixedHoliday(date);
-        }
-
-        function getNextWorkingDay(date) {
-            let nextDay = new Date(date);
-            nextDay.setDate(date.getDate() + 1);
-            while (isHolidayOrWeekend(nextDay)) {
-                nextDay.setDate(nextDay.getDate() + 1);
-            }
-            return nextDay;
-        }
-
-        function getWorkingDay(yearAD, month, n) {
-            let date = new Date(yearAD, month - 1, 1);
-            let workDaysFound = 0;
-            while (date.getMonth() === month - 1) {
-                if (!isHolidayOrWeekend(date)) {
-                    workDaysFound++;
-                    if (workDaysFound === n) return date;
+        // 優化日期計算
+        function getWorkDay(y, m, n) {
+            let d = new Date(y, m-1, 1), c = 0;
+            while (d.getMonth() === m-1) {
+                const day = d.getDay();
+                if (day !== 0 && day !== 6) {
+                    c++;
+                    if (c === n) return d;
                 }
-                date.setDate(date.getDate() + 1);
+                d.setDate(d.getDate() + 1);
+            }
+            return d;
+        }
+
+        function getWeekday(y, m, n, wd) {
+            let d = new Date(y, m-1, 1), c = 0;
+            while (d.getMonth() === m-1) {
+                if (d.getDay() === wd) {
+                    c++;
+                    if (c === n) return d;
+                }
+                d.setDate(d.getDate() + 1);
             }
             return null;
         }
 
-        function getNthWednesday(yearAD, month, n) {
-            let date = new Date(yearAD, month - 1, 1);
-            let wednesdaysFound = 0;
-            while (date.getMonth() === month - 1) {
-                if (date.getDay() === 3) { 
-                    wednesdaysFound++;
-                    if (wednesdaysFound === n) return date;
-                }
-                date.setDate(date.getDate() + 1);
+        function getFridays(y, m) {
+            let r = [], d = new Date(y, m-1, 1);
+            while (d.getMonth() === m-1) {
+                if (d.getDay() === 5) r.push(new Date(d));
+                d.setDate(d.getDate() + 1);
             }
-            return null;
+            return r;
         }
 
-        function getNthWeekday(yearAD, month, n, weekday) {
-            let date = new Date(yearAD, month - 1, 1);
-            let found = 0;
-            while (date.getMonth() === month - 1) {
-                if (date.getDay() === weekday) {
-                    found++;
-                    if (found === n) return date;
-                }
-                date.setDate(date.getDate() + 1);
-            }
-            return null;
+        function fmt(d) {
+            const m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+            return { str: `${m}.${day}`, day: ['日','一','二','三','四','五','六'][d.getDay()], key: parseInt(`${d.getFullYear()}${m}${day}`), obj: d };
         }
 
-        function getAllFridays(yearAD, month) {
-            let fridays = [];
-            let date = new Date(yearAD, month - 1, 1);
-            while (date.getMonth() === month - 1) {
-                if (date.getDay() === 5) fridays.push(new Date(date));
-                date.setDate(date.getDate() + 1);
-            }
-            return fridays;
-        }
-
-        function formatDate(date) {
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
-            return { str: `${m}.${d}`, day: dayNames[date.getDay()], obj: date, key: `${date.getFullYear()}${m}${d}` };
-        }
-
-        function getWeekNumber(d) {
-            const date = new Date(d.getTime());
-            date.setHours(0, 0, 0, 0);
-            date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
-            const week1 = new Date(date.getFullYear(), 0, 4);
-            return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
-        }
-
-        function calculateSchedule() {
+        function buildSchedule() {
             let rawEvents = [];
-            const yearAD = currentYearROC + 1911;
-
+            const y = currentYear + 1911;
+            
             for (let m = 1; m <= 12; m++) {
+                const s = SCHEDULE[m];
+                if (!s) continue; 
                 
-                let mainMonDate, mainTueDate, mainWedDate, mainFriDateKey;
+                const mainMon = new Date(y, m-1, s.m);
+                const mainTue = new Date(y, m-1, s.t);
+                const mainWed = new Date(y, m-1, s.w);
+                const mainFriKey = fmt(new Date(y, m-1, s.f)).key;
+                const wd1 = getWorkDay(y, m, 1);
+                const wd2 = getWorkDay(y, m, 2);
                 
-                if (currentYearROC === 115) {
-                    const cfg = mainInspDates115[m];
-                    mainMonDate = new Date(yearAD, m-1, cfg.mon);
-                    mainTueDate = new Date(yearAD, m-1, cfg.tue);
-                    mainWedDate = new Date(yearAD, m-1, cfg.wed);
-                    mainFriDateKey = formatDate(new Date(yearAD, m-1, cfg.fri)).key; 
-                } else {
-                    const mainWed = getNthWeekday(yearAD, m, 4, 3);
-                    if(mainWed) {
-                        mainWedDate = mainWed;
-                        mainTueDate = new Date(mainWed); mainTueDate.setDate(mainWed.getDate()-1);
-                        mainMonDate = new Date(mainWed); mainMonDate.setDate(mainWed.getDate()-2);
-                        let fri = new Date(mainWed); fri.setDate(mainWed.getDate()+2);
-                        mainFriDateKey = formatDate(fri).key;
-                    }
-                }
-
-                // T74 Logic
-                let entryGroup = 0;
-                if (m % 3 === 1) entryGroup = 1;
-                else if (m % 3 === 2) entryGroup = 2;
-                else entryGroup = 3;
-
-                const entryDateObj = getWorkingDay(yearAD, m, 1);
-                const t74_entry_list = t74_machines.filter(x => x.group === entryGroup).map(x => x.id);
-                rawEvents.push({ sys: 'T74', month: m, dateObj: formatDate(entryDateObj), type: '進廠', machines: t74_entry_list, remark: '排機 (免保)' });
-
-                let prevWeekFri;
-                if (mainMonDate) {
-                    prevWeekFri = new Date(mainMonDate);
-                    prevWeekFri.setDate(prevWeekFri.getDate() - 3); 
-                }
-
-                if (mainWedDate) {
-                    const mainFmt = formatDate(mainWedDate);
-                    const t74_maint_list = t74_machines.filter(x => x.group !== entryGroup).map(x => x.id);
+                const add = (d, t, sys, filterFn) => {
+                    const sysData = DATA[sys];
+                    if(!sysData) return;
+                    let ids = sysData.list || [];
+                    if(filterFn) ids = ids.filter(filterFn);
                     
-                    if (prevWeekFri) {
-                        let validFri = new Date(prevWeekFri);
-                        if(isFixedHoliday(validFri)) validFri = getNextWorkingDay(validFri);
-                        const w3Fmt = formatDate(validFri);
-                        
-                        if (w3Fmt.key !== mainFriDateKey) {
-                            const wn = Math.ceil(validFri.getDate() / 7);
-                            const lbl = `${m}月第${wn}週週保養`;
-                            
-                            rawEvents.push({ sys: 'T74', month: m, dateObj: w3Fmt, type: lbl, machines: t74_maint_list, remark: '連主檢前一週' });
-                            // Monthly items (Week 3)
-                            rawEvents.push({ sys: 'T85', month: m, dateObj: w3Fmt, type: lbl, machines: t85_ids, remark: '每月第3週' });
-                            rawEvents.push({ sys: 'M1911A1', month: m, dateObj: w3Fmt, type: lbl, machines: m1911a1_ids, remark: '每月第3週' });
-                            rawEvents.push({ sys: 'M1911', month: m, dateObj: w3Fmt, type: lbl, machines: m1911_ids, remark: '每月第3週' });
-                            rawEvents.push({ sys: 'COMPASS', month: m, dateObj: w3Fmt, type: lbl, machines: compass_ids, remark: '每月第3週' });
-                        }
-                    }
-                    
-                    rawEvents.push({ sys: 'T74', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: t74_maint_list, remark: '排機 (週三)' });
-                    rawEvents.push({ sys: 'T65K2', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: t65k2_ids, remark: '步槍 (週三)' });
-                    rawEvents.push({ sys: 'T85', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: t85_ids, remark: '第4週 (週三)' });
-                    rawEvents.push({ sys: 'M1911A1', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: m1911a1_ids, remark: '第4週 (週三)' });
-                    rawEvents.push({ sys: 'M1911', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: m1911_ids, remark: '第4週 (週三)' });
-                    rawEvents.push({ sys: 'COMPASS', month: m, dateObj: mainFmt, type: '連主官裝備檢查', machines: compass_ids, remark: '第4週 (週三)' });
-                }
-                
-                // T65K2: Week 1 Friday
-                const week1Fri = getNthWeekday(yearAD, m, 1, 5);
-                if (week1Fri) {
-                     let validFri = new Date(week1Fri);
-                     if (isFixedHoliday(validFri)) validFri = getNextWorkingDay(validFri);
-                     const w1Fmt = formatDate(validFri);
-                     if (w1Fmt.key !== mainFriDateKey) {
-                         const wn = Math.ceil(validFri.getDate() / 7);
-                         const lbl = `${m}月第${wn}週週保養`;
-                         rawEvents.push({ sys: 'T65K2', month: m, dateObj: w1Fmt, type: lbl, machines: t65k2_ids, remark: '每月第1週(週五)' });
-                     }
-                }
+                    rawEvents.push({ m, d: fmt(d), t, sys, cat: sysData.cat, ids, bulk: sysData.bulk });
+                };
 
-                // T75
-                const wd1 = getWorkingDay(yearAD, m, 1);
-                const wd2 = getWorkingDay(yearAD, m, 2);
-                const grpA = t75_data.filter(x => x.group === 'A').map(x => x.id);
-                const grpB = t75_data.filter(x => x.group === 'B').map(x => x.id);
-                rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd1), type: '進廠', machines: grpA, remark: '班機 1-18' });
-                rawEvents.push({ sys: 'T75', month: m, dateObj: formatDate(wd2), type: '進廠', machines: grpB, remark: '班機 19-36' });
-
-                // Entries (Others)
-                rawEvents.push({ sys: 'MHR-112', month: m, dateObj: formatDate(wd1), type: '進廠', machines: mhr112_ids, remark: '第1工作日' });
-                rawEvents.push({ sys: 'PRC-37C', month: m, dateObj: formatDate(wd1), type: '進廠', machines: prc37c_ids, remark: '第1工作日' });
-                rawEvents.push({ sys: 'M8A1', month: m, dateObj: formatDate(wd2), type: '進廠', machines: m8a1_ids, remark: '第2工作日' });
-                rawEvents.push({ sys: 'LS-920', month: m, dateObj: formatDate(wd2), type: '進廠', machines: ls920_ids, remark: '第2工作日' });
-
-                // Weekly Maint
-                const allFridays = getAllFridays(yearAD, m);
-                allFridays.forEach(fri => {
-                    let validFri = new Date(fri);
-                    if (formatDate(validFri).key === mainFriDateKey) return; 
-                    
-                    let isDeferred = false;
-                    if (isFixedHoliday(validFri)) {
-                        validFri = getNextWorkingDay(validFri);
-                        isDeferred = true;
-                    }
-                    const friFmt = formatDate(validFri);
-                    const wn = Math.ceil(validFri.getDate() / 7);
-                    const lbl = `${m}月第${wn}週週保養`;
-                    const rem = isDeferred ? '遇假日順延' : '週五實施';
-
-                    rawEvents.push({ sys: 'M8A1', month: m, dateObj: friFmt, type: lbl, machines: m8a1_ids, remark: rem });
-                    rawEvents.push({ sys: 'LS-920', month: m, dateObj: friFmt, type: lbl, machines: ls920_ids, remark: rem });
-                    rawEvents.push({ sys: 'MHR-112', month: m, dateObj: friFmt, type: lbl, machines: mhr112_ids, remark: rem });
-                    rawEvents.push({ sys: 'PRC-37C', month: m, dateObj: friFmt, type: lbl, machines: prc37c_ids, remark: rem });
-                    rawEvents.push({ sys: 'KY-2000A', month: m, dateObj: friFmt, type: lbl, machines: ky2000_ids, remark: rem });
-                    rawEvents.push({ sys: 'TRUCK', month: m, dateObj: friFmt, type: lbl, machines: truck_ids, remark: rem });
+                // Schedule Rules
+                const eg = m % 3 || 3;
+                add(wd1, '進廠', 'T74', (_, i) => DATA.T74.groups[i] === eg);
+                add(mainWed, '連主官裝備檢查', 'T74', (_, i) => DATA.T74.groups[i] !== eg);
+                add(wd1, '進廠', 'T75', (_, i) => DATA.T75.groups[i] === 'A');
+                add(wd2, '進廠', 'T75', (_, i) => DATA.T75.groups[i] === 'B');
+                add(mainWed, '連主官裝備檢查', 'T65K2');
+                const w1f = getWeekday(y, m, 1, 5);
+                if (w1f && fmt(w1f).key !== mainFriKey) add(w1f, `${m}月第1週週保養`, 'T65K2');
+                ['T85','M1911A1','M1911'].forEach(s => add(mainWed, '連主官裝備檢查', s));
+                ['TRUCK', 'COMPASS', 'TS71', 'KY-2000A'].forEach(s => add(mainTue, '連主官裝備檢查', s));
+                ['MHR-112','PRC-37C'].forEach(s => { add(wd1, '進廠', s); add(mainTue, '連主官裝備檢查', s); });
+                ['M8A1','LS-920'].forEach(s => { add(wd2, '進廠', s); add(mainMon, '連主官裝備檢查', s); });
+                ['T3-75','M256','WAR_FILTER','62_FILTER','T4-86'].forEach(s => add(mainMon, '連主官裝備檢查', s));
+                getFridays(y, m).forEach(f => {
+                    if (fmt(f).key === mainFriKey) return;
+                    const w = Math.ceil(f.getDate() / 7);
+                    ['M8A1','LS-920','MHR-112','PRC-37C','KY-2000A','TRUCK'].forEach(s => add(f, `${m}月第${w}週週保養`, s));
                 });
-
-                // New Chem Items (Week 2 Fri)
-                const fri2 = getNthWeekday(yearAD, m, 2, 5);
-                if (fri2) {
-                    let validFri = new Date(fri2);
-                    if(isFixedHoliday(validFri)) validFri = getNextWorkingDay(validFri);
-                    const f2Fmt = formatDate(validFri);
-                    if (f2Fmt.key !== mainFriDateKey) {
-                        const wn = Math.ceil(validFri.getDate() / 7);
-                        const lbl = `${m}月第${wn}週週保養`;
-                        const rem = '第2週';
-                        rawEvents.push({ sys: 'T3-75', month: m, dateObj: f2Fmt, type: lbl, machines: t375_ids, remark: rem });
-                        rawEvents.push({ sys: 'M256', month: m, dateObj: f2Fmt, type: lbl, machines: m256_ids, remark: rem });
-                        rawEvents.push({ sys: 'WAR_FILTER', month: m, dateObj: f2Fmt, type: lbl, machines: filter_war_ids, remark: rem });
-                        rawEvents.push({ sys: '62_FILTER', month: m, dateObj: f2Fmt, type: lbl, machines: filter_62_ids, remark: rem });
-                        rawEvents.push({ sys: 'T4-86', month: m, dateObj: f2Fmt, type: lbl, machines: t486_ids, remark: rem });
-                    }
-                }
-
-                // Main Inspection
-                if (mainMonDate && mainTueDate) {
-                    const monFmt = formatDate(mainMonDate);
-                    const tueFmt = formatDate(mainTueDate);
-                    const mainLbl = '連主官裝備檢查';
-                    
-                    rawEvents.push({ sys: 'M8A1', month: m, dateObj: monFmt, type: mainLbl, machines: m8a1_ids, remark: '週一' });
-                    rawEvents.push({ sys: 'LS-920', month: m, dateObj: monFmt, type: mainLbl, machines: ls920_ids, remark: '週一' });
-                    rawEvents.push({ sys: 'T3-75', month: m, dateObj: monFmt, type: mainLbl, machines: t375_ids, remark: '週一' });
-                    rawEvents.push({ sys: 'M256', month: m, dateObj: monFmt, type: mainLbl, machines: m256_ids, remark: '週一' });
-                    rawEvents.push({ sys: 'WAR_FILTER', month: m, dateObj: monFmt, type: mainLbl, machines: filter_war_ids, remark: '週一' });
-                    rawEvents.push({ sys: '62_FILTER', month: m, dateObj: monFmt, type: mainLbl, machines: filter_62_ids, remark: '週一' });
-                    rawEvents.push({ sys: 'T4-86', month: m, dateObj: monFmt, type: mainLbl, machines: t486_ids, remark: '週一' });
-
-                    rawEvents.push({ sys: 'TRUCK', month: m, dateObj: tueFmt, type: mainLbl, machines: truck_ids, remark: '週二' });
-                }
             }
-
-            // Merge
-            let grouped = {};
+            
+            const groupedMap = new Map();
             rawEvents.forEach(e => {
-                const key = `${e.dateObj.str}_${e.type}`;
-                if (!grouped[key]) {
-                    grouped[key] = {
-                        month: e.month,
-                        date: e.dateObj.str,
-                        day: e.dateObj.day,
-                        type: e.type,
-                        dateKey: e.dateObj.key,
-                        entries: []
-                    };
+                const k = `${e.d.key}_${e.t}`;
+                if (!groupedMap.has(k)) {
+                    groupedMap.set(k, {
+                        m: e.m, d: e.d, t: e.t,
+                        items: [],
+                        cats: new Set(),
+                        totalCount: 0
+                    });
                 }
-                e.machines.sort(naturalSort);
-                grouped[key].entries.push({ sys: e.sys, machines: e.machines, remark: e.remark });
+                const group = groupedMap.get(k);
+                group.items.push({ sys: e.sys, ids: e.ids, bulk: e.bulk, cat: e.cat });
+                group.cats.add(e.cat);
+                group.totalCount += (e.bulk || (e.ids ? e.ids.length : 0));
             });
 
-            mergedData = Object.values(grouped);
-            mergedData.sort((a, b) => {
-                if (a.dateKey !== b.dateKey) return a.dateKey - b.dateKey;
-                return a.type.localeCompare(b.type);
-            });
+            allData = Array.from(groupedMap.values()).sort((a, b) => a.d.key - b.d.key);
         }
 
-        window.copyCardData = function(rowIndex) {
-            const row = mergedData[rowIndex];
-            const sysFilter = document.getElementById('sysFilter').value;
-            const searchInput = document.getElementById('searchInput').value.trim();
-
-            let visibleEntries = row.entries.filter(entry => {
-                if (sysFilter !== 'all' && entry.sys !== sysFilter) return false;
-                if (searchInput && !entry.machines.some(m => m.includes(searchInput))) return false;
-                return true;
-            });
-
-            if(visibleEntries.length === 0) return;
-
-            const uniqueCategories = new Set(visibleEntries.map(e => sysCategories[e.sys])).size;
-            const totalItems = visibleEntries.length;
-            const totalPieces = visibleEntries.reduce((acc, curr) => acc + curr.machines.length, 0);
-
-            const dateParts = row.date.split('.'); 
-            const formattedDate = `${currentYearROC}/${dateParts[0]}/${dateParts[1]}`;
-
-            let text = `📅 ${formattedDate} (${row.day})\n`;
-            text += `📝 任務：${row.type}\n`;
-            text += `📊 統計：${uniqueCategories}類 ${totalItems}項 ${totalPieces}件\n`;
-            text += `------------------------\n`;
-
-            visibleEntries.forEach((entry, idx) => {
-                const sysName = sysNames[entry.sys];
-                const count = entry.machines.length;
-                const isBulk = ['T3-75', 'M256', 'WAR_FILTER', '62_FILTER', 'T4-86'].includes(entry.sys);
+        // --- RENDER LOGIC ---
+        function filter() {
+            const mf = document.getElementById('monthFilter').value;
+            const cf = document.getElementById('catFilter').value;
+            const tf = document.getElementById('typeFilter').value;
+            const q = document.getElementById('searchInput').value.trim();
+            
+            filteredData = allData.filter(row => {
+                if (mf !== 'all' && row.m != mf) return false;
+                if (tf !== 'all' && (tf === '週保養' ? !row.t.includes('週保養') : row.t !== tf)) return false;
                 
-                text += `${idx+1}. ${sysName} (${count}件)\n`;
-                if(!isBulk) {
-                    text += `   序號: ${entry.machines.join(', ')}\n`;
-                }
-                // Removed the remark line from copy text
-            });
-            
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            document.body.appendChild(textarea);
-            textarea.select();
-            
-            try {
-                document.execCommand('copy');
-                const toast = document.getElementById('toast');
-                toast.classList.add('show');
-                setTimeout(() => toast.classList.remove('show'), 2000);
-            } catch (err) {
-                alert('複製失敗，請手動複製');
-            }
-            
-            document.body.removeChild(textarea);
-        }
-
-        // --- RENDER ---
-        function renderCards() {
-            const container = document.getElementById('cardContainer');
-            const noData = document.getElementById('noData');
-            const monthFilter = document.getElementById('monthFilter').value;
-            const sysFilter = document.getElementById('sysFilter').value;
-            const typeFilter = document.getElementById('typeFilter').value;
-            const searchInput = document.getElementById('searchInput').value.trim();
-
-            container.innerHTML = '';
-            noData.classList.add('hidden');
-            let hasData = false;
-
-            mergedData.forEach((row, rowIndex) => {
-                let visibleEntries = row.entries.filter(entry => {
-                    // System Filter
-                    if (sysFilter !== 'all' && entry.sys !== sysFilter) return false;
-
-                    if (searchInput) {
-                        const sysName = sysNames[entry.sys];
-                        if (sysName.includes(searchInput)) return true;
-                        if (!entry.machines.some(m => m.includes(searchInput))) return false;
-                    }
+                const hasMatchingItem = row.items.some(it => {
+                    if (cf !== 'all' && it.cat !== cf) return false;
+                    if (q && it.ids && !it.ids.some(id => id.includes(q))) return false;
                     return true;
                 });
+                return hasMatchingItem;
+            });
 
-                if (monthFilter !== 'all' && row.month != monthFilter) return;
+            renderList(q, cf);
+        }
+
+        function renderList(searchQuery, catFilter) {
+            const container = document.getElementById('cardContainer');
+            const noData = document.getElementById('noData');
+            container.innerHTML = '';
+            
+            if (filteredData.length === 0) {
+                noData.classList.remove('hidden');
+                return;
+            }
+            noData.classList.add('hidden');
+            
+            const fragment = document.createDocumentFragment();
+
+            filteredData.forEach((row, i) => {
+                const taskTypeClass = row.t === '進廠' ? 'task-entry' : row.t.includes('連主官') ? 'task-main' : 'task-weekly';
                 
-                if (typeFilter !== 'all') {
-                    if (typeFilter === '週保養' && !row.type.includes('週保養')) return;
-                    if (typeFilter !== '週保養' && row.type !== typeFilter) return;
-                }
-
-                if (visibleEntries.length === 0) return;
-
-                hasData = true;
-                
-                const uniqueCategories = new Set(visibleEntries.map(e => sysCategories[e.sys])).size;
-                const totalItems = visibleEntries.length;
-                const totalPieces = visibleEntries.reduce((acc, curr) => acc + curr.machines.length, 0);
-
-                let cardClass = '', badgeClass = '', icon = '';
-                let titleText = row.type;
-                
-                if (row.type === '進廠') {
-                    cardClass = 'card-entry'; badgeClass = 'badge-entry'; icon = 'fa-truck-arrow-right';
-                } else if (row.type.includes('連主官')) {
-                    cardClass = 'card-main'; badgeClass = 'badge-main'; icon = 'fa-clipboard-check';
-                } else {
-                    cardClass = 'card-weekly'; badgeClass = 'badge-weekly'; icon = 'fa-wrench';
-                }
-
-                let entriesHtml = visibleEntries.map((entry, entryIndex) => {
-                    const listId = `list-${rowIndex}-${entryIndex}`;
-                    const count = entry.machines.length;
-                    const isBulk = ['T3-75', 'M256', 'WAR_FILTER', '62_FILTER', 'T4-86'].includes(entry.sys);
-                    
-                    let listHtml = '';
-                    if (isBulk) {
-                        listHtml = `<div class="text-sm font-bold text-gray-500">批量管制 (無序號)</div>`;
-                    } else {
-                        const chips = entry.machines.map((id, idx) => 
-                            `<span class="inline-block bg-white border border-gray-200 rounded px-1.5 py-0.5 mr-1 mb-1 text-xs text-gray-700 font-mono"><span class="text-gray-400 select-none mr-1">${machineIndexMap.get(id)}.</span>${id}</span>`
-                        ).join('');
-
-                        if (count > 20) {
-                            listHtml = `
-                                <div class="text-sm">
-                                    <span id="short-${listId}" class="block overflow-hidden max-h-20 mask-linear">${chips}</span>
-                                    <span id="full-${listId}" class="hidden">${chips}</span>
-                                </div>
-                                <button onclick="toggleList('${listId}')" id="btn-${listId}" class="mt-1 text-xs text-blue-600 font-bold flex items-center gap-1 p-1 rounded hover:bg-blue-50">
-                                    展開全部 (${count}) <i class="fa-solid fa-chevron-down"></i>
-                                </button>
-                            `;
-                        } else {
-                            listHtml = `<div>${chips}</div>`;
-                        }
-                    }
-
-                    return `
-                        <div class="mb-3 last:mb-0 rounded-r-md ${sysClasses[entry.sys]} p-3">
-                            <div class="flex justify-between items-center mb-1">
-                                <div class="font-bold text-sm text-gray-800">${sysNames[entry.sys]}</div>
-                                <span class="text-xs bg-white/70 px-2 py-0.5 rounded text-gray-700 font-mono shadow-sm">${count}件</span>
-                            </div>
-                            ${listHtml}
-                            <div class="text-[10px] text-gray-500 mt-1 italic text-right">${entry.remark}</div>
-                        </div>
-                    `;
-                }).join('');
+                const catsArray = Array.from(row.cats);
+                const catSummaryStr = catsArray.map(c => c[0]).join('');
+                const summaryHtml = `
+                    <span class="font-bold text-slate-700 mr-1">${catSummaryStr}</span>
+                    <span class="text-slate-500">${row.cats.size}類 ${row.items.length}項 ${row.totalCount}件</span>
+                `;
 
                 const card = document.createElement('div');
-                card.className = `bg-white rounded-lg shadow-sm border border-gray-100 p-4 ${cardClass}`;
+                card.className = `bg-white rounded-lg shadow-sm mb-4 card-base border border-slate-200`;
                 
-                card.innerHTML = `
-                    <div class="flex justify-between items-center mb-3">
-                        <div class="flex items-center gap-2">
-                            <div class="text-xl font-bold text-slate-800 leading-none">
-                                ${row.date} (${row.day})
+                let innerHtml = `
+                    <div class="p-4">
+                        <div class="flex justify-between mb-3 items-start">
+                            <div class="flex flex-col gap-1">
+                                <div class="flex items-center gap-2">
+                                    <div class="text-xl font-bold text-slate-800">${row.d.str} <span class="text-sm font-normal text-slate-500">(${row.d.day})</span></div>
+                                    <span class="badge-task ${taskTypeClass}">${row.t}</span>
+                                </div>
+                                <div class="text-xs bg-slate-100 px-2 py-1 rounded w-fit flex items-center gap-1 border border-slate-200">
+                                    ${summaryHtml}
+                                </div>
                             </div>
-                            <span class="text-xl font-bold px-2 py-1 rounded flex items-center gap-1 ${badgeClass} whitespace-nowrap h-fit">
-                                ${row.type}
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="copyCardData(${rowIndex})" class="text-slate-400 hover:text-emerald-600 transition-colors p-1" title="複製到LINE">
-                                <i class="fa-regular fa-copy text-lg"></i>
+                            <button onclick="copy(${i})" class="text-slate-400 hover:text-emerald-600 transition-colors p-1.5 rounded-full hover:bg-emerald-50 active:scale-90" title="複製清單">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
                             </button>
-                            <span class="badge-stat text-xs font-bold px-2 py-1 rounded shadow-sm whitespace-nowrap">
-                                ${uniqueCategories}類 ${totalItems}項 ${totalPieces}件
-                            </span>
                         </div>
-                    </div>
-                    <div class="space-y-2">${entriesHtml}</div>
                 `;
-                container.appendChild(card);
-            });
 
-            if(!hasData) noData.classList.remove('hidden');
+                row.items.forEach((it, idx) => {
+                    if(catFilter !== 'all' && it.cat !== catFilter) return;
+
+                    const cnt = it.bulk || (it.ids ? it.ids.length : 0);
+                    const rowId = `sys-${i}-${idx}`;
+                    const shouldExpand = searchQuery && it.ids && it.ids.some(id => id.includes(searchQuery));
+                    const catTheme = CATEGORIES[it.cat] || { css: 'theme-truck' }; 
+
+                    innerHtml += `
+                        <div id="row-${rowId}" class="sys-card ${catTheme.css} ${shouldExpand ? 'expanded' : ''} cursor-pointer relative" onclick="toggleSys('${rowId}')">
+                            <div class="flex justify-between items-center p-2.5">
+                                <div class="flex items-center gap-3">
+                                    <!-- 裝備名稱 -->
+                                    <span class="font-bold text-sm text-slate-700">${DATA[it.sys].name}</span>
+                                    <!-- 類別標籤 (使用 CSS 變數上色) -->
+                                    <span class="sys-tag">${it.cat} ${cnt}件</span>
+                                </div>
+                                <div class="text-slate-400 chevron" id="icon-${rowId}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
+                                </div>
+                            </div>
+                            <div id="list-${rowId}" class="${shouldExpand ? '' : 'hidden'} px-3 pb-3 pt-1 border-t border-dashed border-slate-200">
+                    `;
+                    
+                    if (it.bulk) {
+                        innerHtml += `<div class="text-xs text-slate-500 italic bg-slate-50 p-2 rounded">批量管制 (無個別序號)</div>`;
+                    } else if (it.ids && it.ids.length > 0) {
+                        innerHtml += `<div class="flex flex-wrap gap-1.5 mt-1">`;
+                        it.ids.forEach(id => {
+                            const match = searchQuery && id.includes(searchQuery);
+                            const style = match ? 'bg-amber-100 border-amber-300 text-amber-900 font-bold ring-2 ring-amber-200' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300';
+                            innerHtml += `<span class="${style} border px-2 py-0.5 rounded text-xs font-mono transition-all">${id}</span>`;
+                        });
+                        innerHtml += `</div>`;
+                    } else {
+                         innerHtml += `<div class="text-xs text-slate-400 italic">無資料</div>`;
+                    }
+                    innerHtml += `</div></div>`;
+                });
+                
+                innerHtml += `</div>`;
+                card.innerHTML = innerHtml;
+                fragment.appendChild(card);
+            });
+            
+            container.appendChild(fragment);
         }
 
-        window.toggleList = function(id) {
-            const shortSpan = document.getElementById(`short-${id}`);
-            const fullSpan = document.getElementById(`full-${id}`);
-            const btn = document.getElementById(`btn-${id}`);
-            if (fullSpan.classList.contains('hidden')) {
-                fullSpan.classList.remove('hidden');
-                shortSpan.classList.add('hidden');
-                shortSpan.classList.remove('max-h-20');
-                btn.innerHTML = `收合 <i class="fa-solid fa-chevron-up"></i>`;
+        // --- UI INTERACTION ---
+        window.toggleSys = function(id) {
+            const content = document.getElementById(`list-${id}`);
+            const row = document.getElementById(`row-${id}`);
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                row.classList.add('expanded');
             } else {
-                fullSpan.classList.add('hidden');
-                shortSpan.classList.remove('hidden');
-                shortSpan.classList.add('max-h-20');
-                btn.innerHTML = `展開全部 (${document.getElementById('full-'+id).childElementCount}) <i class="fa-solid fa-chevron-down"></i>`;
+                content.classList.add('hidden');
+                row.classList.remove('expanded');
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            const yearSelect = document.getElementById('yearInput');
-            for(let y=115; y<=125; y++) {
-                const opt = document.createElement('option');
-                opt.value = y;
-                opt.text = y;
-                opt.className = "text-slate-800 font-sans";
-                if(y === 115) opt.selected = true; 
-                yearSelect.appendChild(opt);
+        // --- SETTINGS ---
+        function openSettings() {
+            document.getElementById('jsonEditorData').value = JSON.stringify(DATA, null, 2);
+            document.getElementById('jsonEditorSchedule').value = JSON.stringify(SCHEDULE, null, 2);
+            document.getElementById('settingsModal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            document.getElementById('settingsModal').classList.add('hidden');
+        }
+
+        function saveSettings() {
+            try {
+                const newData = JSON.parse(document.getElementById('jsonEditorData').value);
+                const newSched = JSON.parse(document.getElementById('jsonEditorSchedule').value);
+                localStorage.setItem('MY_EQUIP_DATA', JSON.stringify(newData));
+                localStorage.setItem('MY_SCHEDULE', JSON.stringify(newSched));
+                alert('設定已儲存！');
+                location.reload();
+            } catch (e) {
+                alert('JSON 格式錯誤，請檢查內容！\n' + e);
             }
-            currentYearROC = parseInt(yearSelect.value);
-            calculateSchedule();
-            renderCards();
-            yearSelect.addEventListener('change', (e) => {
-                currentYearROC = parseInt(e.target.value);
-                calculateSchedule();
-                renderCards();
+        }
+
+        function resetToDefaults() {
+            if(confirm('確定要恢復預設值嗎？')) {
+                localStorage.removeItem('MY_EQUIP_DATA');
+                localStorage.removeItem('MY_SCHEDULE');
+                location.reload();
+            }
+        }
+
+        // --- UTILS ---
+        window.copy = function(i) {
+            const row = filteredData[i];
+            const catsArr = Array.from(row.cats);
+            let txt = `📅 ${currentYear}/${row.d.str.replace('.','/')} (${row.d.day})\n📝 任務：${row.t}\n📊 統計：${catsArr.join('')} ${row.cats.size}類 ${row.items.length}項 ${row.totalCount}件\n${'─'.repeat(24)}\n`;
+            row.items.forEach((it, j) => {
+                const cnt = it.bulk || it.ids.length;
+                txt += `${j+1}. [${it.cat}] ${DATA[it.sys].name} (${cnt}件)\n`;
+                if (it.ids) txt += `   序號: ${it.ids.join(', ')}\n`;
             });
-            ['monthFilter', 'typeFilter', 'sysFilter', 'searchInput'].forEach(id => {
-                document.getElementById(id).addEventListener('input', renderCards);
+            navigator.clipboard.writeText(txt).then(() => {
+                const t = document.getElementById('toast');
+                t.classList.add('show');
+                setTimeout(() => t.classList.remove('show'), 2000);
             });
+        }
+
+        window.exportToCSV = function() {
+            let csv = '\uFEFFYear,Month,Date,Day,Task,Category,System,Count,IDs\n';
+            allData.forEach(row => {
+                row.items.forEach(it => {
+                    const ids = it.bulk ? `批量${it.bulk}件` : it.ids.join(';');
+                    csv += `${currentYear},${row.m},${row.d.str},${row.d.day},${row.t},${it.cat},${DATA[it.sys].name},${it.bulk||it.ids.length},"${ids}"\n`;
+                });
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `裝備管制清冊_${currentYear}年.csv`;
+            a.click();
+        }
+
+        // --- INIT ---
+        loadData();
+        
+        const ysel = document.getElementById('yearInput');
+        for (let y = 115; y <= 125; y++) {
+            const opt = document.createElement('option');
+            opt.value = opt.text = y;
+            if (y === 115) opt.selected = true;
+            ysel.appendChild(opt);
+        }
+
+        const msel = document.getElementById('monthFilter');
+        msel.innerHTML = '<option value="all">月份: 全部</option>';
+        for (let i = 1; i <= 12; i++) msel.innerHTML += `<option value="${i}">${i}月</option>`;
+
+        document.getElementById('typeFilter').innerHTML = '<option value="all">任務: 全部</option><option value="進廠">🔴 進廠</option><option value="連主官裝備檢查">🔵 連主檢</option><option value="週保養">🟢 週保養</option>';
+
+        ysel.onchange = (e) => { currentYear = +e.target.value; buildSchedule(); filter(); };
+        
+        let debounceTimer;
+        document.getElementById('searchInput').oninput = (e) => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(filter, 300);
+        };
+        
+        ['catFilter', 'typeFilter', 'monthFilter'].forEach(id => {
+            document.getElementById(id).onchange = filter;
         });
+
+        buildSchedule();
+        filter();
     </script>
 </body>
 </html>
