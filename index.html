@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>115年 裝備管制 (Lite)</title>
+    <title>裝備管制</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap');
@@ -251,10 +251,10 @@
                 const wd2 = getWorkDay(y, m, 2);
                 
                 const add = (d, t, sys, filterFn) => {
-                    // 安全性檢查: 如果日期無效則不加入
+                    // 安全性檢查
                     if (!d) return;
 
-                    // 這裡可以做最後的假日防呆，如果 d 是 1/1，往後找一天
+                    // 假日防呆 (包含元旦 1/1)
                     let finalDate = new Date(d);
                     while (checkIsHoliday(finalDate) || isWeekend(finalDate)) {
                         finalDate.setDate(finalDate.getDate() + 1);
@@ -284,13 +284,28 @@
                 ['M8A1','LS-920'].forEach(s => { add(wd2, '進廠', s); add(mainMon, '連主官裝備檢查', s); });
                 ['T3-75','M256','WAR_FILTER','62_FILTER','T4-86'].forEach(s => add(mainMon, '連主官裝備檢查', s));
                 
-                getFridays(y, m).forEach(f => {
-                    // 若週保養日剛好是 1/1，add() 內部的防呆會自動順延至 1/2 (若週六則順延至下週一)
+                // 計算當月有幾天，判斷大小月 (大月:31天)
+                const daysInMonth = new Date(y, m, 0).getDate();
+                const isBigMonth = daysInMonth === 31;
+
+                getFridays(y, m).forEach((f, idx, arr) => {
+                    // 若週保養日剛好是 1/1，add() 內部的防呆會自動順延
                     if (fmt(f).key === mainFriKey) return;
                     const w = Math.ceil(f.getDate() / 7);
                     
                     // 原有的通用週保養
                     ['M8A1','LS-920','MHR-112','PRC-37C','KY-2000A','TRUCK'].forEach(s => add(f, `${m}月第${w}週週保養`, s));
+
+                    // T3-75 防毒面具: 大月(31天)排在最後一週(最後一個週五)，小月排在第1週
+                    if (isBigMonth) {
+                        if (idx === arr.length - 1) { // 最後一個週五
+                            add(f, `${m}月第${w}週週保養`, 'T3-75');
+                        }
+                    } else {
+                        if (w === 1) {
+                             add(f, `${m}月第${w}週週保養`, 'T3-75');
+                        }
+                    }
 
                     // 第3週追加兵器保養 (T74當月進廠者排除)
                     if (w === 3) {
@@ -310,7 +325,6 @@
                 if (truckDate.getFullYear() > y) break; 
 
                 let actualDate = new Date(truckDate);
-                
                 // 遇 週末 或 1/1 順延
                 while(isWeekend(actualDate) || checkIsHoliday(actualDate)) {
                     actualDate.setDate(actualDate.getDate() + 1);
