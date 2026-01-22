@@ -51,9 +51,9 @@
         
         /* Red: 進廠, B保 */
         .task-entry { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
-        /* Blue: 連主檢, S保 (視覺藍色，但邏輯是進廠) */
+        /* Blue: 連主檢, S保 */
         .task-main { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
-        /* Green: 週保養, A保 (視覺綠色，但邏輯是進廠) */
+        /* Green: 週保養, A保 */
         .task-weekly { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
     </style>
 </head>
@@ -65,7 +65,6 @@
                 <span class="text-white font-bold mr-2 text-lg">裝備管制</span>
                 <select id="yearInput" class="bg-slate-700 text-white font-bold text-sm px-2 py-1.5 rounded-lg border border-slate-600 outline-none focus:border-emerald-500"></select>
             </div>
-            <!-- Export Button Removed -->
             <div class="flex gap-2">
                 <button onclick="openSettings()" class="bg-slate-600 text-white px-3 py-1.5 rounded-lg text-sm transition-colors hover:bg-slate-500">⚙️</button>
             </div>
@@ -181,11 +180,24 @@
         }
 
         // Utils
+        function isWeekend(d) {
+            const day = d.getDay();
+            return day === 0 || day === 6; // 0=Sun, 6=Sat
+        }
+
+        // 假日判斷: 1/1 是元旦 (固定放假)
+        function checkIsHoliday(d) {
+            return d.getMonth() === 0 && d.getDate() === 1;
+        }
+
+        function isWorkDay(d) {
+            return !isWeekend(d) && !checkIsHoliday(d);
+        }
+
         function getWorkDay(y, m, n) {
             let d = new Date(y, m-1, 1), c = 0;
             while (d.getMonth() === m-1) {
-                const day = d.getDay();
-                if (day !== 0 && day !== 6) {
+                if (isWorkDay(d)) {
                     c++;
                     if (c === n) return d;
                 }
@@ -225,7 +237,6 @@
             const y = currentYear + 1911; 
             
             // --- 1. 標準例行性檢查 (Standard Routine) ---
-            // 這些是「標準」的週保養與連主檢，包含輪車的例行檢查
             for (let m = 1; m <= 12; m++) {
                 const s = SCHEDULE[m];
                 if (!s) continue; 
@@ -234,16 +245,27 @@
                 const mainTue = new Date(y, m-1, s.t);
                 const mainWed = new Date(y, m-1, s.w);
                 const mainFriKey = fmt(new Date(y, m-1, s.f)).key;
+                
+                // getWorkDay 已內建排除 1/1
                 const wd1 = getWorkDay(y, m, 1);
                 const wd2 = getWorkDay(y, m, 2);
                 
                 const add = (d, t, sys, filterFn) => {
+                    // 安全性檢查: 如果日期無效則不加入
+                    if (!d) return;
+
+                    // 這裡可以做最後的假日防呆，如果 d 是 1/1，往後找一天
+                    let finalDate = new Date(d);
+                    while (checkIsHoliday(finalDate) || isWeekend(finalDate)) {
+                        finalDate.setDate(finalDate.getDate() + 1);
+                    }
+                    
                     const sysData = DATA[sys];
                     if(!sysData) return;
                     let ids = sysData.list || [];
                     if(filterFn) ids = ids.filter(filterFn);
                     
-                    rawEvents.push({ m, d: fmt(d), t, sys, cat: sysData.cat, ids, bulk: sysData.bulk });
+                    rawEvents.push({ m, d: fmt(finalDate), t, sys, cat: sysData.cat, ids, bulk: sysData.bulk });
                 };
 
                 const eg = m % 3 || 3;
@@ -256,23 +278,29 @@
                 if (w1f && fmt(w1f).key !== mainFriKey) add(w1f, `${m}月第1週週保養`, 'T65K2');
                 ['T85','M1911A1','M1911'].forEach(s => add(mainWed, '連主官裝備檢查', s));
                 
-                // 輪車的「例行性」檢查 (保留，不影響B/S/A)
+                // 輪車的「例行性」檢查
                 ['TRUCK', 'COMPASS', 'TS71', 'KY-2000A'].forEach(s => add(mainTue, '連主官裝備檢查', s));
                 ['MHR-112','PRC-37C'].forEach(s => { add(wd1, '進廠', s); add(mainTue, '連主官裝備檢查', s); });
                 ['M8A1','LS-920'].forEach(s => { add(wd2, '進廠', s); add(mainMon, '連主官裝備檢查', s); });
                 ['T3-75','M256','WAR_FILTER','62_FILTER','T4-86'].forEach(s => add(mainMon, '連主官裝備檢查', s));
+                
                 getFridays(y, m).forEach(f => {
+                    // 若週保養日剛好是 1/1，add() 內部的防呆會自動順延至 1/2 (若週六則順延至下週一)
                     if (fmt(f).key === mainFriKey) return;
                     const w = Math.ceil(f.getDate() / 7);
-                    // 輪車的「例行性」週保養 (保留)
+                    
+                    // 原有的通用週保養
                     ['M8A1','LS-920','MHR-112','PRC-37C','KY-2000A','TRUCK'].forEach(s => add(f, `${m}月第${w}週週保養`, s));
+
+                    // 第3週追加兵器保養 (T74當月進廠者排除)
+                    if (w === 3) {
+                         ['M1911', 'M1911A1', 'T85'].forEach(s => add(f, `${m}月第${w}週週保養`, s));
+                         add(f, `${m}月第${w}週週保養`, 'T74', (_, i) => DATA.T74.groups[i] !== eg);
+                    }
                 });
             }
 
-            // --- 2. 3.5噸載重車 獨立進廠排程 (Truck Entry Logic) ---
-            // 規則：基準日 2025/08/25 (B保)，每6個月循環 B -> S -> A -> S
-            // 這些全部都是「進廠」日期，不屬於週保養或連主檢
-            
+            // --- 2. 3.5噸載重車 獨立進廠排程 ---
             let truckDate = new Date(2025, 7, 25); // 2025/08/25
             let cycleIdx = 0; // 0=B, 1=S, 2=A, 3=S
             const cyclePattern = ['B級保養', 'S級保養', 'A級保養', 'S級保養'];
@@ -282,13 +310,14 @@
                 if (truckDate.getFullYear() > y) break; 
 
                 let actualDate = new Date(truckDate);
-                // 遇週六(6)或週日(0)順延至下週一
-                while(actualDate.getDay() === 0 || actualDate.getDay() === 6) {
+                
+                // 遇 週末 或 1/1 順延
+                while(isWeekend(actualDate) || checkIsHoliday(actualDate)) {
                     actualDate.setDate(actualDate.getDate() + 1);
                 }
 
                 if (actualDate.getFullYear() === y) {
-                    const taskName = `輪車進廠 (${cyclePattern[cycleIdx % 4]})`; // 例如: "輪車進廠 (B級保養)"
+                    const taskName = `輪車進廠 (${cyclePattern[cycleIdx % 4]})`; 
                     const sysData = DATA['TRUCK'];
                     if (sysData) {
                         rawEvents.push({
@@ -338,16 +367,12 @@
             filteredData = allData.filter(row => {
                 if (mf !== 'all' && row.m != mf) return false;
                 
-                // 修正後的過濾邏輯
                 if (tf !== 'all') {
                     if (tf === '進廠') {
-                        // 包含: 標準"進廠" OR 包含"輪車進廠" (B/S/A 全部算進廠)
                         if (row.t !== '進廠' && !row.t.includes('輪車進廠')) return false;
                     } else if (tf === '連主官裝備檢查') {
-                        // 嚴格過濾，不包含輪車的 B/S/A
                         if (row.t !== '連主官裝備檢查') return false;
                     } else if (tf === '週保養') {
-                        // 嚴格過濾，不包含輪車的 B/S/A
                         if (!row.t.includes('週保養')) return false;
                     } else {
                         if (row.t !== tf) return false;
@@ -379,9 +404,6 @@
             const fragment = document.createDocumentFragment();
 
             filteredData.forEach((row, i) => {
-                // 視覺樣式邏輯 (Visual Styles Only)
-                // 雖然邏輯上都是進廠，但依據字串給予不同顏色
-                
                 let taskTypeClass = 'task-weekly'; 
                 
                 if (row.t.includes('B級')) {
