@@ -351,6 +351,9 @@
             }
             
             // --- GROUPING & SORTING ---
+            // Define order: 兵器 > 通信 > 化學 > 工兵 > 輪車
+            const catOrder = ['兵器', '通信', '化學', '工兵', '輪車'];
+
             const groupedMap = new Map();
             rawEvents.forEach(e => {
                 const k = `${e.d.key}_${e.t}`;
@@ -368,7 +371,22 @@
                 group.totalCount += (e.bulk || (e.ids ? e.ids.length : 0));
             });
 
-            allData = Array.from(groupedMap.values()).sort((a, b) => a.d.key - b.d.key);
+            // 最終資料產生時，將 items 依照 類別 > 名稱 進行排序
+            allData = Array.from(groupedMap.values()).map(group => {
+                group.items.sort((a, b) => {
+                    // 1. Sort by Category
+                    const idxA = catOrder.indexOf(a.cat);
+                    const idxB = catOrder.indexOf(b.cat);
+                    if (idxA !== -1 && idxB !== -1 && idxA !== idxB) return idxA - idxB;
+                    if (idxA !== -1 && idxB === -1) return -1;
+                    if (idxA === -1 && idxB !== -1) return 1;
+                    if (a.cat !== b.cat) return a.cat.localeCompare(b.cat);
+
+                    // 2. Sort by System Name
+                    return DATA[a.sys].name.localeCompare(DATA[b.sys].name, 'zh-TW');
+                });
+                return group;
+            }).sort((a, b) => a.d.key - b.d.key);
         }
 
         // --- RENDER LOGIC ---
